@@ -52,7 +52,6 @@ export type ApiKey = {
   name: string
   created_at: string
   revoked_at: string | null
-  scopes?: string[] | null
 }
 
 /** One page of an identity list. The collection key varies; see plat5 docs/lists.md. */

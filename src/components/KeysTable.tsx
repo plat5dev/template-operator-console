@@ -37,7 +37,6 @@ export function KeysTable({ base }: { base: string }) {
             <tr>
               <th>Name</th>
               <th>Prefix</th>
-              <th>Scopes</th>
               <th>Created</th>
               <th>Revoked</th>
               <th />
@@ -50,7 +49,6 @@ export function KeysTable({ base }: { base: string }) {
                 <td>
                   <code>{k.key_prefix}…</code>
                 </td>
-                <td className="small">{k.scopes?.length ? k.scopes.join(", ") : <span className="text-body-secondary">all</span>}</td>
                 <td className="small">
                   <When at={k.created_at} />
                 </td>
