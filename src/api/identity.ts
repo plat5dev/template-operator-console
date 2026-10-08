@@ -13,7 +13,6 @@ export type Member = {
   user_id: string | null
   service_account_id: string | null
   status: MemberStatus
-  added_by: string | null
   created_at: string
   updated_at: string
 }
@@ -26,7 +25,6 @@ export type ServiceAccount = {
   member_id: string
   name: string
   status: MemberStatus
-  created_by_user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -42,7 +40,6 @@ export type Invite = {
   max_uses: number | null
   use_count: number
   expires_at: string
-  created_by: string | null
   created_at: string
 }
 

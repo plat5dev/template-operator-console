@@ -57,7 +57,6 @@ export function ServiceAccountPage() {
             <Field label="Id"><Id value={s.id} /></Field>
             <Field label="Member"><Link to={path`/members/${s.member_id}`}>{s.member_id}</Link></Field>
             <Field label="Status"><Status value={s.status} /></Field>
-            <Field label="Created by"><Id value={s.created_by_user_id} /></Field>
             <Field label="Created"><When at={s.created_at} /></Field>
             <Field label="Updated"><When at={s.updated_at} /></Field>
           </Fields>

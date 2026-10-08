@@ -64,7 +64,6 @@ export function MemberPage() {
               )}
             </Field>
             <Field label="Status"><Status value={m.status} /></Field>
-            <Field label="Added by"><Id value={m.added_by} /></Field>
             <Field label="Created"><When at={m.created_at} /></Field>
             <Field label="Updated"><When at={m.updated_at} /></Field>
           </Fields>
