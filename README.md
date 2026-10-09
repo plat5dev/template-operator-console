@@ -89,12 +89,13 @@ bun run build
 |--------------|---------------|
 | `/organizations` | `GET /organizations` |
 | `/organizations/{id}` | `GET PATCH DELETE /organizations/{id}`; members, invites, service accounts under it |
+| `/organizations/{id}/audit-events` | `GET /organizations/{id}/audit-events` |
 | `/organizations/{id}/service-accounts/{id}` | `GET PATCH DELETE`, and its API keys |
 | `/members/{id}` | `GET PATCH DELETE /members/{id}`, and its API keys |
 | `/users/{id}` | memberships, API keys, `POST /users/{id}/organizations` |
 | `/request` | anything |
 
-These follow the identity routes in the gateway's default `routes.yml`. If your gateway routes more, add a page or use Request.
+These follow the gateway's default `routes.yml`. If your gateway routes more, add a page or use Request.
 
 ## Layout
 
@@ -102,7 +103,7 @@ These follow the identity routes in the gateway's default `routes.yml`. If your 
 src/
   config.ts          settings
   auth/              OIDC (oidc.ts), token storage (session.ts), React context
-  api/               fetch wrapper (client.ts), list hooks, identity types
+  api/               fetch wrapper (client.ts), list hooks, identity and audit types
   components/        layout, error envelope, keys table
   pages/             one per console path
 ```

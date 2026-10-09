@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { AuthProvider } from "./auth/AuthContext"
 import { Layout } from "./components/Layout"
 import { RequireAuth } from "./components/RequireAuth"
+import { AuditEventsPage } from "./pages/AuditEventsPage"
 import { CallbackPage } from "./pages/CallbackPage"
 import { HomePage } from "./pages/HomePage"
 import { MemberPage } from "./pages/MemberPage"
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="callback" element={<CallbackPage />} />
             <Route path="organizations" element={signedIn(<OrganizationsPage />)} />
             <Route path="organizations/:organizationId" element={signedIn(<OrganizationPage />)} />
+            <Route path="organizations/:organizationId/audit-events" element={signedIn(<AuditEventsPage />)} />
             <Route
               path="organizations/:organizationId/service-accounts/:serviceAccountId"
               element={signedIn(<ServiceAccountPage />)}

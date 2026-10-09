@@ -36,7 +36,14 @@ export function useResource<T>(path: string) {
 
 type PageResult<T> = Result<T[]> & { hasMore: boolean }
 
-/** Walks an identity list a page at a time: `starting_after` is the last id seen. */
+function withCursor(path: string, after?: string): string {
+  if (!after) return path
+  const sep = path.includes("?") ? "&" : "?"
+  return `${path}${sep}starting_after=${encodeURIComponent(after)}`
+}
+
+/** Walks a list a page at a time. `starting_after` is the last id seen.
+ *  A query string already on `path` is kept; the cursor is appended. */
 export function usePaged<T extends { id: string }>(path: string, collection: string) {
   const [version, setVersion] = useState(0)
   const key = `${path}#${version}`
@@ -45,8 +52,7 @@ export function usePaged<T extends { id: string }>(path: string, collection: str
 
   const fetchPage = useCallback(
     async (after?: string) => {
-      const q = after ? `?starting_after=${encodeURIComponent(after)}` : ""
-      const page = await api<Record<string, unknown>>("GET", path + q)
+      const page = await api<Record<string, unknown>>("GET", withCursor(path, after))
       return { items: (page[collection] as T[] | undefined) ?? [], hasMore: page.has_more === true }
     },
     [path, collection],
@@ -71,13 +77,16 @@ export function usePaged<T extends { id: string }>(path: string, collection: str
     setMore(true)
     try {
       const p = await fetchPage(lastId)
-      setResult((r) => r && { ...r, data: [...(r.data ?? []), ...p.items], hasMore: p.hasMore })
+      setResult((r) => {
+        if (!r || r.path !== path) return r
+        return { ...r, data: [...(r.data ?? []), ...p.items], hasMore: p.hasMore }
+      })
     } catch (error) {
-      setResult((r) => r && { ...r, error })
+      setResult((r) => (r && r.path === path ? { ...r, error } : r))
     } finally {
       setMore(false)
     }
-  }, [fetchPage, lastId])
+  }, [fetchPage, lastId, path])
 
   const reload = useCallback(() => setVersion((v) => v + 1), [])
   return {

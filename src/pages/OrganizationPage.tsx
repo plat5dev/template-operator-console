@@ -22,7 +22,10 @@ export function OrganizationPage() {
       <nav className="small mb-2">
         <Link to="/organizations">Organizations</Link>
       </nav>
-      <h1 className="h3 mb-3">{org.data.name}</h1>
+      <div className="d-flex align-items-baseline justify-content-between mb-3">
+        <h1 className="h3 mb-0">{org.data.name}</h1>
+        <Link to={path`/organizations/${organizationId}/audit-events`}>Audit log</Link>
+      </div>
 
       <div className="card mb-4">
         <div className="card-body">
