@@ -1,6 +1,6 @@
 // Plat5 identity, as routed by the operator gateway. Shapes: plat5 docs/identity.md.
 
-export type OrganizationRef = { id: string; name: string; slug: string }
+export type OrganizationRef = { id: string; name: string }
 
 export type Organization = OrganizationRef & { created_at: string; updated_at: string }
 

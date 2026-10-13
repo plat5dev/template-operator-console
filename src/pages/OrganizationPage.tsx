@@ -31,7 +31,6 @@ export function OrganizationPage() {
         <div className="card-body">
           <Fields>
             <Field label="Id"><Id value={org.data.id} /></Field>
-            <Field label="Slug">{org.data.slug}</Field>
             <Field label="Created"><When at={org.data.created_at} /></Field>
             <Field label="Updated"><When at={org.data.updated_at} /></Field>
           </Fields>
@@ -64,7 +63,6 @@ export function OrganizationPage() {
 function EditOrganization({ base, org, onSaved }: { base: string; org: Organization; onSaved: (o: Organization) => void }) {
   const navigate = useNavigate()
   const [name, setName] = useState(org.name)
-  const [slug, setSlug] = useState(org.slug)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
 
@@ -73,7 +71,7 @@ function EditOrganization({ base, org, onSaved }: { base: string; org: Organizat
     setBusy(true)
     setError(null)
     try {
-      onSaved(await api<Organization>("PATCH", base, { name, slug }))
+      onSaved(await api<Organization>("PATCH", base, { name }))
     } catch (err) {
       setError(err)
     } finally {
@@ -83,9 +81,9 @@ function EditOrganization({ base, org, onSaved }: { base: string; org: Organizat
 
   async function remove() {
     const typed = window.prompt(
-      `Delete ${org.name}? This hard-deletes its members, invites, service accounts, and keys.\n\nType the slug "${org.slug}" to confirm.`,
+      `Delete ${org.name}? This hard-deletes its members, invites, service accounts, and keys.\n\nType the name "${org.name}" to confirm.`,
     )
-    if (typed !== org.slug) return
+    if (typed !== org.name) return
     setError(null)
     try {
       await api("DELETE", base)
@@ -99,19 +97,15 @@ function EditOrganization({ base, org, onSaved }: { base: string; org: Organizat
     <form className="mt-3 pt-3 border-top" onSubmit={(e) => void save(e)}>
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
       <div className="row g-2 align-items-end">
-        <div className="col-md-4">
+        <div className="col-md-8">
           <label className="form-label small">Name</label>
           <input className="form-control form-control-sm" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label small">Slug</label>
-          <input className="form-control form-control-sm" value={slug} onChange={(e) => setSlug(e.target.value)} required />
         </div>
         <div className="col-md-4 d-flex gap-2">
           <button
             type="submit"
             className="btn btn-primary btn-sm"
-            disabled={busy || (name === org.name && slug === org.slug)}
+            disabled={busy || name === org.name}
           >
             Save
           </button>

@@ -21,7 +21,6 @@ export function OrganizationsPage() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Slug</th>
               <th>Id</th>
               <th>Created</th>
             </tr>
@@ -32,7 +31,6 @@ export function OrganizationsPage() {
                 <td>
                   <Link to={path`/organizations/${o.id}`}>{o.name}</Link>
                 </td>
-                <td>{o.slug}</td>
                 <td className="small">
                   <Id value={o.id} />
                 </td>
