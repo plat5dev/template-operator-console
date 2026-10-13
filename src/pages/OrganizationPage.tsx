@@ -120,15 +120,16 @@ function EditOrganization({ base, org, onSaved }: { base: string; org: Organizat
 
 function Members({ base }: { base: string }) {
   const list = usePaged<Member>(base + "/members", "members")
-  const [userId, setUserId] = useState("")
+  const [issuer, setIssuer] = useState("")
+  const [subject, setSubject] = useState("")
   const [error, setError] = useState<unknown>(null)
 
   async function add(e: FormEvent) {
     e.preventDefault()
     setError(null)
     try {
-      await api("POST", base + "/members", { user_id: userId.trim() })
-      setUserId("")
+      await api("POST", base + "/members", { idp: { issuer: issuer.trim(), subject: subject.trim() } })
+      setSubject("")
       list.reload()
     } catch (err) {
       setError(err)
@@ -138,12 +139,19 @@ function Members({ base }: { base: string }) {
   return (
     <>
       <ErrorAlert error={list.error || error} onDismiss={error ? () => setError(null) : undefined} />
-      <form className="d-flex gap-2 mb-3" style={{ maxWidth: "32rem" }} onSubmit={(e) => void add(e)}>
+      <form className="d-flex gap-2 mb-3" style={{ maxWidth: "40rem" }} onSubmit={(e) => void add(e)}>
         <input
           className="form-control form-control-sm"
-          placeholder="user_id"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          placeholder="IdP issuer"
+          value={issuer}
+          onChange={(e) => setIssuer(e.target.value)}
+          required
+        />
+        <input
+          className="form-control form-control-sm"
+          placeholder="IdP subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
           required
         />
         <button type="submit" className="btn btn-outline-primary btn-sm text-nowrap">
@@ -173,10 +181,8 @@ function Members({ base }: { base: string }) {
                   </Link>
                 </td>
                 <td className="small">
-                  {m.user_id ? (
-                    <>
-                      user <Link to={path`/users/${m.user_id}`}>{m.user_id}</Link>
-                    </>
+                  {m.principal === "user" ? (
+                    <>user {m.display_name ?? <span className="text-body-secondary">no name</span>}</>
                   ) : (
                     <>
                       service account{" "}

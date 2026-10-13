@@ -10,12 +10,23 @@ export type Member = {
   id: string
   organization_id: string
   principal: "user" | "service_account"
-  user_id: string | null
   service_account_id: string | null
+  display_name: string | null
   status: MemberStatus
   created_at: string
   updated_at: string
 }
+
+export type User = {
+  id: string
+  display_name: string | null
+  status: "active" | "suspended"
+  created_at: string
+  updated_at: string
+}
+
+/** GET /members/{member_id}/user: the person a member is. Staff only. */
+export type MemberUser = { user_id: string }
 
 export type Membership = { id: string; organization: OrganizationRef; status: "active" }
 

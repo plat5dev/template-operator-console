@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api, path } from "../api/client"
 import { useResource } from "../api/hooks"
-import type { Member } from "../api/identity"
+import type { Member, MemberUser } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { KeysTable } from "../components/KeysTable"
 import { Field, Fields, Id, Loading, Status, When } from "../components/ui"
@@ -52,9 +52,9 @@ export function MemberPage() {
             <Field label="Id"><Id value={m.id} /></Field>
             <Field label="Organization"><Link to={org}>{m.organization_id}</Link></Field>
             <Field label="Principal">
-              {m.user_id ? (
+              {m.principal === "user" ? (
                 <>
-                  user <Link to={path`/users/${m.user_id}`}>{m.user_id}</Link>
+                  user {m.display_name ?? ""} <PersonLink base={base} />
                 </>
               ) : (
                 <>
@@ -89,4 +89,12 @@ export function MemberPage() {
       <KeysTable base={base + "/api-keys"} />
     </>
   )
+}
+
+/** The person this member is. Gone once the person's account is deleted. */
+function PersonLink({ base }: { base: string }) {
+  const person = useResource<MemberUser>(base + "/user")
+  if (person.loading) return null
+  if (!person.data) return <span className="text-body-secondary">(account deleted)</span>
+  return <Link to={path`/users/${person.data.user_id}`}>{person.data.user_id}</Link>
 }
