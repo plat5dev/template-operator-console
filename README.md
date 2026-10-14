@@ -17,7 +17,7 @@ Stack: Vite · React · TypeScript · Bootstrap · [oauth4webapi](https://github
 | A public client at that IdP | `VITE_AUTH_CLIENT_ID`. No secret, PKCE, redirect URI `<console origin>/callback` |
 | An audience the gateway accepts | The access token's `aud` is in the gateway's `AUTH_AUDIENCES` |
 
-The console sends the **access token**. The ID token only supplies the name shown in the header.
+The console sends the **access token**. The ID token, when the IdP returns one, only supplies the name shown in the header.
 
 ## Settings
 
@@ -32,6 +32,20 @@ Build-time. Vite inlines them, so each deployment is its own build. The build fa
 | `VITE_AUTH_AUDIENCE` | Optional. Sent as `audience` on `/authorize`, for IdPs that use it (Auth0) |
 
 The redirect URI is always `<origin>/callback`.
+
+## Run the image
+
+`ghcr.io/plat5dev/operator-console` serves the console on `:8080`. Its settings are the container's environment, read at start, so one image serves any deployment:
+
+```bash
+docker run -p 5412:8080 \
+  -e GATEWAY_URL=http://localhost:5410 \
+  -e AUTH_ISSUER=http://localhost:5411 \
+  -e AUTH_CLIENT_ID=operator-console \
+  ghcr.io/plat5dev/operator-console:v0.1.0
+```
+
+`AUTH_SCOPES` and `AUTH_AUDIENCE` are optional, like their `VITE_` twins. `plat5 start` runs this image with the local operator plane. Images are built on `v*` tags.
 
 ## Deploy to Cloudflare Pages
 
@@ -56,6 +70,7 @@ Pages serves `index.html` for unknown paths, so deep links work. `public/_header
 | Okta | SPA app integration, PKCE. Use a custom authorization server so access tokens are JWTs; its audience (e.g. `api://operator`) goes in `AUTH_AUDIENCES`. Issuer is the authorization server's, e.g. `https://example.okta.com/oauth2/default` |
 | Dex | Static client with `public: true` and the redirect URI. Add the console origin to `web.allowedOrigins` so the browser can call `/token`. Access token `aud` is the client id |
 | Auth0 | SPA application. Set `VITE_AUTH_AUDIENCE` to the API identifier; the same value goes in `AUTH_AUDIENCES` |
+| Plat5 Auth | Publishes OAuth 2.0 metadata, not OIDC, and returns no ID token: the console falls back to both, and shows the email from the access token (`properties.email`, with `AUTH_TOKEN_EMAIL=true` on the issuer). Add the client id to `AUTH_ALLOWED_CLIENTS`, `<origin>/callback` to `AUTH_ALLOWED_REDIRECT_URIS`, and the origin to `AUTH_ALLOWED_ORIGINS`. Access token `aud` is the client id |
 
 Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 

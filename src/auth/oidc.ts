@@ -11,16 +11,33 @@ const clientAuth = oauth.None()
 const local = issuer.protocol === "http:" && ["localhost", "127.0.0.1"].includes(issuer.hostname)
 const httpOptions = local ? { [oauth.allowInsecureRequests]: true } : {}
 
-let server: Promise<oauth.AuthorizationServer> | undefined
+// oidc: the IdP published OIDC discovery, so the token response carries an ID token
+// and the nonce is checked.
+type Discovered = { as: oauth.AuthorizationServer; oidc: boolean }
 
-function authorizationServer(): Promise<oauth.AuthorizationServer> {
-  server ??= oauth
-    .discoveryRequest(issuer, httpOptions)
-    .then((res) => oauth.processDiscoveryResponse(issuer, res))
-    .catch((err: unknown) => {
-      server = undefined
-      throw err
-    })
+let server: Promise<Discovered> | undefined
+
+// OIDC discovery, else OAuth 2.0 metadata (RFC 8414) for IdPs that only publish that,
+// such as Plat5 Auth.
+async function discover(): Promise<Discovered> {
+  try {
+    const res = await oauth.discoveryRequest(issuer, httpOptions)
+    return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: true }
+  } catch (oidcErr) {
+    try {
+      const res = await oauth.discoveryRequest(issuer, { ...httpOptions, algorithm: "oauth2" })
+      return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: false }
+    } catch {
+      throw oidcErr
+    }
+  }
+}
+
+function authorizationServer(): Promise<Discovered> {
+  server ??= discover().catch((err: unknown) => {
+    server = undefined
+    throw err
+  })
   return server
 }
 
@@ -29,7 +46,7 @@ type PendingLogin = { state: string; nonce: string; verifier: string; returnTo: 
 const PENDING = "operator-console.login"
 
 export async function login(returnTo: string): Promise<void> {
-  const as = await authorizationServer()
+  const { as } = await authorizationServer()
   if (!as.authorization_endpoint) throw new Error("IdP has no authorization_endpoint")
   const pending: PendingLogin = {
     state: oauth.generateRandomState(),
@@ -70,7 +87,7 @@ async function exchange(callbackUrl: URL): Promise<string> {
   if (!raw) throw new Error("No sign-in in progress in this tab. Start again.")
   const pending = JSON.parse(raw) as PendingLogin
 
-  const as = await authorizationServer()
+  const { as, oidc } = await authorizationServer()
   const params = oauth.validateAuthResponse(as, client, callbackUrl, pending.state)
   const res = await oauth.authorizationCodeGrantRequest(
     as,
@@ -81,20 +98,48 @@ async function exchange(callbackUrl: URL): Promise<string> {
     pending.verifier,
     httpOptions,
   )
-  const result = await oauth.processAuthorizationCodeResponse(as, client, res, {
-    expectedNonce: pending.nonce,
-    requireIdToken: true,
-  })
-  const claims = oauth.getValidatedIdTokenClaims(result)!
+  // An OIDC IdP returns an ID token, checked here. A plain OAuth IdP (Plat5 Auth) does not.
+  const result = await oauth.processAuthorizationCodeResponse(
+    as,
+    client,
+    res,
+    oidc ? { expectedNonce: pending.nonce, requireIdToken: true } : undefined,
+  )
+  const who = oauth.getValidatedIdTokenClaims(result) ?? accessTokenClaims(result.access_token)
 
   const session: Session = {
     accessToken: result.access_token,
     // No expires_in means unknown. Assume an hour; the gateway's 401 is the real answer.
     expiresAt: Date.now() + (result.expires_in ?? 3600) * 1000,
-    sub: claims.sub,
-    email: typeof claims.email === "string" ? claims.email : null,
-    name: typeof claims.name === "string" ? claims.name : null,
+    sub: typeof who.sub === "string" ? who.sub : "",
+    email: stringClaim(who, "email"),
+    name: stringClaim(who, "name"),
   }
   writeSession(session)
   return pending.returnTo
+}
+
+// Without an ID token, the name in the header comes from the access token's claims.
+// Display only: unverified here, and the gateway verifies the token on every call.
+function accessTokenClaims(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split(".")[1]
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+    const claims = JSON.parse(json) as unknown
+    return typeof claims === "object" && claims !== null ? (claims as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
+// A claim at the top level, else under properties (Plat5 Auth's subject properties).
+function stringClaim(claims: Record<string, unknown>, name: string): string | null {
+  const top = claims[name]
+  if (typeof top === "string") return top
+  const props = claims.properties
+  if (typeof props === "object" && props !== null) {
+    const nested = (props as Record<string, unknown>)[name]
+    if (typeof nested === "string") return nested
+  }
+  return null
 }
