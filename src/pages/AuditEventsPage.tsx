@@ -15,6 +15,7 @@ type Filters = {
   outcome: string
   actor: string
   requestId: string
+  createdId: string
   after: string
   before: string
 }
@@ -25,6 +26,7 @@ const emptyFilters: Filters = {
   outcome: "",
   actor: "",
   requestId: "",
+  createdId: "",
   after: "",
   before: "",
 }
@@ -36,9 +38,10 @@ const outcomeClass: Record<string, string> = {
   no_response: "text-bg-secondary",
 }
 
+/** An org's log, or a person's: the route names one of them. */
 export function AuditEventsPage() {
-  const { organizationId = "" } = useParams()
-  const base = path`/organizations/${organizationId}`
+  const { organizationId, userId } = useParams()
+  const base = userId ? path`/users/${userId}` : path`/organizations/${organizationId ?? ""}`
   const [draft, setDraft] = useState(emptyFilters)
   const [applied, setApplied] = useState(emptyFilters)
   const [filterError, setFilterError] = useState<string | null>(null)
@@ -66,14 +69,17 @@ export function AuditEventsPage() {
   return (
     <>
       <nav className="small mb-2">
-        <Link to="/organizations">Organizations</Link>
+        <Link to={userId ? "/users" : "/organizations"}>{userId ? "Users" : "Organizations"}</Link>
         {" / "}
         <Link to={base}>
-          <code>{organizationId}</code>
+          <code>{userId ?? organizationId}</code>
         </Link>
       </nav>
       <h1 className="h3 mb-1">Audit log</h1>
       <p className="text-body-secondary small">
+        {userId
+          ? "What this person did with their account, through user routes. What they did inside an org is in that org's log. "
+          : ""}
         Recorded by the customer gateway. Newest first. A staff call through this console is not in it.
       </p>
 
@@ -103,6 +109,11 @@ export function AuditEventsPage() {
             label="Request id"
             value={draft.requestId}
             onChange={(requestId) => setDraft({ ...draft, requestId })}
+          />
+          <TextFilter
+            label="Created id"
+            value={draft.createdId}
+            onChange={(createdId) => setDraft({ ...draft, createdId })}
           />
           <TextFilter
             label="From"
@@ -172,9 +183,13 @@ function EventRows({ event, open, onToggle }: { event: AuditEvent; open: boolean
           <When at={event.occurred_at} />
         </td>
         <td className="small">
-          <Link to={path`/members/${actor.member_id}`}>
-            <code>{actor.member_id}</code>
-          </Link>
+          {actor.member_id ? (
+            <Link to={path`/members/${actor.member_id}`}>
+              <code>{actor.member_id}</code>
+            </Link>
+          ) : (
+            "the person"
+          )}
           <div className="text-body-secondary">
             {actor.auth_type}
             {actor.key_prefix && ` · ${actor.key_prefix}`}
@@ -212,6 +227,18 @@ function EventDetails({ event }: { event: AuditEvent }) {
   const params = Object.entries(event.params).sort(([a], [b]) => a.localeCompare(b))
   return (
     <Fields>
+      {event.user_id && event.organization_id && (
+        <Field label="Organization">
+          <Link to={path`/organizations/${event.organization_id}`}>
+            <code>{event.organization_id}</code>
+          </Link>
+        </Field>
+      )}
+      {event.created_id && (
+        <Field label="Created">
+          <Id value={event.created_id} />
+        </Field>
+      )}
       <Field label="IP">
         <Id value={event.ip} />
       </Field>
@@ -303,6 +330,7 @@ function queryOf(f: Filters): string {
   put("outcome", f.outcome)
   put("actor_member_id", f.actor)
   put("request_id", f.requestId)
+  put("created_id", f.createdId)
   const after = toRfc3339(f.after)
   const before = toRfc3339(f.before)
   if (after) q.set("occurred_after", after)

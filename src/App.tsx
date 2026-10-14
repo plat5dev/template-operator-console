@@ -35,6 +35,7 @@ export default function App() {
             <Route path="members/:memberId" element={signedIn(<MemberPage />)} />
             <Route path="users" element={signedIn(<UsersPage />)} />
             <Route path="users/:userId" element={signedIn(<UserPage />)} />
+            <Route path="users/:userId/audit-events" element={signedIn(<AuditEventsPage />)} />
             <Route path="request" element={signedIn(<RequestPage />)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
