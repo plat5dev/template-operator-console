@@ -1,10 +1,12 @@
 # Operator Console
 
-An example console for the [operator gateway](https://github.com/plat5dev/operator). Fork it, point it at your gateway and staff IdP, deploy it to Cloudflare Pages.
+A console for your staff, on the [operator gateway](https://github.com/plat5dev/operator): every organization and person, their members, keys, and audit logs, and a raw request page for anything else.
 
 It is a static SPA. It signs staff in with OIDC (authorization code + PKCE), then calls gateway paths with the staff token. It has no backend, no secrets, and keeps nothing. The gateway authenticates, authorizes, and logs who did what.
 
-Not part of the gateway. Not required. Write your own, or use none.
+`plat5 init` copies it into a project's `console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `staff@example.com` / `password`. Without a `console/` (`plat5 init --no-console`), `plat5 start` runs the stock image instead.
+
+To add a page: a file in `src/pages/`, a route in `src/App.tsx`, a link in `src/components/Layout.tsx`. Read with `useResource` / `usePaged` (`src/api/hooks.ts`), write with `api()` (`src/api/client.ts`). The path must be in the operator gateway's routes: the project's `operator.routes.yml`.
 
 Stack: Vite · React · TypeScript · Bootstrap · [oauth4webapi](https://github.com/panva/oauth4webapi).
 

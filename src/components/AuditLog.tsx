@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 import type { AuditEvent } from "../api/audit"
 import { path } from "../api/client"
-import { usePaged } from "../api/hooks"
+import { useMemberNames, usePaged } from "../api/hooks"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { Empty, Field, Fields, Id, LoadMore, Loading, When } from "../components/ui"
 
@@ -45,6 +45,7 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
   const [filterError, setFilterError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const list = usePaged<AuditEvent>(base + "/audit-events" + queryOf(applied), "audit_events")
+  const names = useMemberNames(list.items.flatMap((e) => (e.actor.member_id ? [e.actor.member_id] : [])))
 
   function apply(e: FormEvent) {
     e.preventDefault()
@@ -152,6 +153,7 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
                 <EventRows
                   key={event.id}
                   event={event}
+                  name={event.actor.member_id ? names.get(event.actor.member_id) : undefined}
                   open={open === event.id}
                   onToggle={() => setOpen(open === event.id ? null : event.id)}
                 />
@@ -165,7 +167,17 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
   )
 }
 
-function EventRows({ event, open, onToggle }: { event: AuditEvent; open: boolean; onToggle: () => void }) {
+function EventRows({
+  event,
+  name,
+  open,
+  onToggle,
+}: {
+  event: AuditEvent
+  name?: { name: string | null; serviceAccount: boolean }
+  open: boolean
+  onToggle: () => void
+}) {
   const actor = event.actor
   return (
     <>
@@ -175,13 +187,14 @@ function EventRows({ event, open, onToggle }: { event: AuditEvent; open: boolean
         </td>
         <td className="small">
           {actor.member_id ? (
-            <Link to={path`/members/${actor.member_id}`}>
-              <code>{actor.member_id}</code>
+            <Link to={path`/members/${actor.member_id}`} title={actor.member_id}>
+              {name?.name ?? <code>{actor.member_id}</code>}
             </Link>
           ) : (
             "the person"
           )}
           <div className="text-body-secondary">
+            {name?.serviceAccount && "service account · "}
             {actor.auth_type}
             {actor.key_prefix && ` · ${actor.key_prefix}`}
           </div>

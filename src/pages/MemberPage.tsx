@@ -59,7 +59,9 @@ export function MemberPage() {
               ) : (
                 <>
                   service account{" "}
-                  <Link to={org + path`/service-accounts/${m.service_account_id ?? ""}`}>{m.service_account_id}</Link>
+                  <Link to={org + path`/service-accounts/${m.service_account_id ?? ""}`}>
+                    {m.display_name ?? m.service_account_id}
+                  </Link>
                 </>
               )}
             </Field>

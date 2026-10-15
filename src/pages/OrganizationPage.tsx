@@ -190,19 +190,17 @@ function Members({ base }: { base: string }) {
               <tr key={m.id}>
                 <td>
                   <Link to={path`/members/${m.id}`}>
-                    <code>{m.id}</code>
+                    {m.display_name ?? <span className="text-body-secondary">(no name yet)</span>}
                   </Link>
+                  <div>
+                    <Id value={m.id} />
+                  </div>
                 </td>
                 <td className="small">
                   {m.principal === "user" ? (
-                    <>user {m.display_name ?? <span className="text-body-secondary">no name</span>}</>
+                    "person"
                   ) : (
-                    <>
-                      service account{" "}
-                      <Link to={base + path`/service-accounts/${m.service_account_id ?? ""}`}>
-                        {m.service_account_id}
-                      </Link>
-                    </>
+                    <Link to={base + path`/service-accounts/${m.service_account_id ?? ""}`}>service account</Link>
                   )}
                 </td>
                 <td className="small">{m.role ?? <span className="text-body-secondary">none</span>}</td>

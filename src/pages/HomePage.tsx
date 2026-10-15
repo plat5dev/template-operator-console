@@ -22,10 +22,10 @@ export function HomePage() {
 
   return (
     <>
-      <h1 className="h3 mb-3">Operator Console</h1>
+      <h1 className="h3 mb-3">Staff console</h1>
       <p className="text-body-secondary">
-        An example client of the operator gateway. Every page is a call to a gateway path with your staff token. The
-        gateway logs who did what; this console keeps nothing.
+        Your staff's view of every organization and person. Every page is a call to the operator gateway with your
+        staff token. The gateway logs who did what; this console keeps nothing.
       </p>
 
       <div className="card mb-3">

@@ -52,7 +52,7 @@ export function UsersPage() {
               <tr key={u.id}>
                 <td>
                   <Link to={path`/users/${u.id}`}>
-                    {u.display_name ?? <span className="text-body-secondary">no name</span>}
+                    {u.display_name ?? <span className="text-body-secondary">(no name yet)</span>}
                   </Link>
                 </td>
                 <td className="small">
