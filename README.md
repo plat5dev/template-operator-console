@@ -42,7 +42,7 @@ docker run -p 5412:8080 \
   -e GATEWAY_URL=http://localhost:5410 \
   -e AUTH_ISSUER=http://localhost:5411 \
   -e AUTH_CLIENT_ID=operator-console \
-  ghcr.io/plat5dev/operator-console:v0.1.0
+  ghcr.io/plat5dev/operator-console:v0.1.1
 ```
 
 `AUTH_SCOPES` and `AUTH_AUDIENCE` are optional, like their `VITE_` twins. `plat5 start` runs this image with the local operator plane. Images are built on `v*` tags.
