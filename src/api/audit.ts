@@ -27,3 +27,20 @@ export type AuditEvent = {
   /** The id a create produced. */
   created_id: string | null
 }
+
+/** The staff audit log (operator docs/audit.md): what staff did through the operator gateway. */
+export type StaffAuditEvent = {
+  id: string
+  occurred_at: string
+  request_id: string
+  actor: { issuer: string; operator_id: string; email: string | null; client_id: string | null }
+  upstream: string
+  method: string
+  route: string
+  params: Record<string, string>
+  path: string | null
+  ip: string
+  outcome: string
+  status: number | null
+  details: unknown
+}

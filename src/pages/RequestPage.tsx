@@ -20,7 +20,7 @@ function statusClass(status: number): string {
 export function RequestPage() {
   const [params, setParams] = useSearchParams()
   const [method, setMethod] = useState(methods.includes(params.get("method") ?? "") ? params.get("method")! : "GET")
-  const [target, setTarget] = useState(params.get("path") ?? "/organizations")
+  const [rawTarget, setTarget] = useState(params.get("path") ?? "/organizations")
   const [body, setBody] = useState("")
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<RawResponse | null>(null)
@@ -30,8 +30,14 @@ export function RequestPage() {
     e.preventDefault()
     setError(null)
     setRes(null)
+    // A pasted full URL on the gateway is fine: keep its path.
+    let target = rawTarget.trim()
+    if (target.startsWith(config.gatewayUrl)) {
+      target = target.slice(config.gatewayUrl.length) || "/"
+      setTarget(target)
+    }
     if (!target.startsWith("/")) {
-      setError(new Error("Path must start with /"))
+      setError(new Error(`Enter a path on the gateway, starting with / (like /organizations), or a URL on ${config.gatewayUrl}`))
       return
     }
     let payload: string | undefined
@@ -73,12 +79,18 @@ export function RequestPage() {
               <option key={m}>{m}</option>
             ))}
           </select>
-          <span className="input-group-text font-monospace small">{config.gatewayUrl}</span>
+          <span
+            className="input-group-text font-monospace small bg-body-secondary text-body-secondary user-select-none"
+            title="The operator gateway. Enter the path after it."
+          >
+            {config.gatewayUrl}
+          </span>
           <input
             className="form-control font-monospace"
-            value={target}
+            value={rawTarget}
             onChange={(e) => setTarget(e.target.value)}
-            aria-label="Path"
+            aria-label="Path on the gateway"
+            placeholder="/organizations"
             spellCheck={false}
           />
           <button type="submit" className="btn btn-primary" disabled={busy}>

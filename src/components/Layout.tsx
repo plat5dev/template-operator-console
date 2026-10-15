@@ -25,6 +25,11 @@ export function Layout() {
                 </NavLink>
               </li>
               <li className="nav-item">
+                <NavLink className="nav-link" to="/staff-activity">
+                  Staff activity
+                </NavLink>
+              </li>
+              <li className="nav-item">
                 <NavLink className="nav-link" to="/request">
                   Request
                 </NavLink>

@@ -3,14 +3,29 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { ApiError, api, path } from "../api/client"
 import { usePaged, useResource } from "../api/hooks"
 import type { Membership, Organization, OrganizationRef, User } from "../api/identity"
+import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { KeysTable } from "../components/KeysTable"
 import { Empty, Field, Fields, Id, LoadMore, Loading, Status, When } from "../components/ui"
 
-export function UserPage() {
+type Tab = "memberships" | "keys" | "audit"
+
+/** A person, with their memberships, user keys, and audit log as tabs. The audit tab
+ *  has its own URL (`…/audit-events`), so a link can open it. */
+export function UserPage({ audit = false }: { audit?: boolean }) {
   const { userId = "" } = useParams()
+  const navigate = useNavigate()
   const base = path`/users/${userId}`
-  const memberships = usePaged<Membership>(base + "/memberships", "memberships")
+  const [listTab, setListTab] = useState<Exclude<Tab, "audit">>("memberships")
+  const tab: Tab = audit ? "audit" : listTab
+  function setTab(t: Tab) {
+    if (t === "audit") {
+      navigate(base + "/audit-events")
+      return
+    }
+    setListTab(t)
+    if (audit) navigate(base)
+  }
 
   return (
     <>
@@ -23,7 +38,32 @@ export function UserPage() {
 
       <Person base={base} />
 
-      <h2 className="h5">Memberships</h2>
+      <ul className="nav nav-tabs mb-3">
+        {(
+          [
+            ["memberships", "Memberships"],
+            ["keys", "User API keys"],
+            ["audit", "Audit log"],
+          ] as [Tab, string][]
+        ).map(([key, label]) => (
+          <li className="nav-item" key={key}>
+            <button type="button" className={`nav-link ${tab === key ? "active" : ""}`} onClick={() => setTab(key)}>
+              {label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {tab === "memberships" && <Memberships base={base} />}
+      {tab === "keys" && <KeysTable base={base + "/api-keys"} />}
+      {tab === "audit" && <AuditLog base={base} person />}
+    </>
+  )
+}
+
+function Memberships({ base }: { base: string }) {
+  const memberships = usePaged<Membership>(base + "/memberships", "memberships")
+  return (
+    <>
       <ErrorAlert error={memberships.error} />
       {memberships.loading && memberships.items.length === 0 ? (
         <Loading />
@@ -59,9 +99,6 @@ export function UserPage() {
       )}
       <LoadMore show={memberships.hasMore} loading={memberships.loading} onClick={() => void memberships.loadMore()} />
       <CreateOrganization base={base} />
-
-      <h2 className="h5 mt-4">User API keys</h2>
-      <KeysTable base={base + "/api-keys"} />
     </>
   )
 }
@@ -146,9 +183,6 @@ function Person({ base }: { base: string }) {
           <Field label="Status"><Status value={u.status} /></Field>
           <Field label="Created"><When at={u.created_at} /></Field>
           <Field label="Updated"><When at={u.updated_at} /></Field>
-          <Field label="Audit log">
-            <Link to={base + "/audit-events"}>The person's log</Link>
-          </Field>
         </Fields>
         {handoff && (
           <div className="alert alert-warning small mt-3 mb-0">

@@ -18,19 +18,47 @@ type Discovered = { as: oauth.AuthorizationServer; oidc: boolean }
 let server: Promise<Discovered> | undefined
 
 // OIDC discovery, else OAuth 2.0 metadata (RFC 8414) for IdPs that only publish that,
-// such as Plat5 Auth.
-async function discover(): Promise<Discovered> {
+// such as Plat5 Auth. The kind that answered is remembered per issuer and tried first
+// next time, so an OAuth-only IdP's 404 on the OIDC document happens once, not on
+// every page load.
+type Kind = "oidc" | "oauth2"
+const KIND_KEY = `operator-console.discovery.${config.issuer}`
+
+function rememberedKind(): Kind | null {
   try {
-    const res = await oauth.discoveryRequest(issuer, httpOptions)
-    return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: true }
-  } catch (oidcErr) {
+    const v = localStorage.getItem(KIND_KEY)
+    return v === "oidc" || v === "oauth2" ? v : null
+  } catch {
+    return null
+  }
+}
+
+async function discoverAs(kind: Kind): Promise<Discovered> {
+  const res = await oauth.discoveryRequest(
+    issuer,
+    kind === "oidc" ? httpOptions : { ...httpOptions, algorithm: "oauth2" },
+  )
+  return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: kind === "oidc" }
+}
+
+async function discover(): Promise<Discovered> {
+  const first: Kind = rememberedKind() ?? "oidc"
+  const order: Kind[] = first === "oidc" ? ["oidc", "oauth2"] : ["oauth2", "oidc"]
+  let firstErr: unknown
+  for (const kind of order) {
     try {
-      const res = await oauth.discoveryRequest(issuer, { ...httpOptions, algorithm: "oauth2" })
-      return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: false }
-    } catch {
-      throw oidcErr
+      const found = await discoverAs(kind)
+      try {
+        localStorage.setItem(KIND_KEY, kind)
+      } catch {
+        // storage blocked: discover in order again next time
+      }
+      return found
+    } catch (err) {
+      firstErr ??= err
     }
   }
+  throw firstErr
 }
 
 function authorizationServer(): Promise<Discovered> {

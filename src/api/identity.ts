@@ -12,6 +12,8 @@ export type Member = {
   principal: "user" | "service_account"
   service_account_id: string | null
   display_name: string | null
+  /** null with roles off. */
+  role: string | null
   status: MemberStatus
   created_at: string
   updated_at: string

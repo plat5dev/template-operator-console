@@ -3,16 +3,29 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { api, path } from "../api/client"
 import { usePaged, useResource } from "../api/hooks"
 import type { Invite, Member, Organization, ServiceAccount } from "../api/identity"
+import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { Empty, Field, Fields, Id, LoadMore, Loading, Status, When } from "../components/ui"
 
-type Tab = "members" | "invites" | "service-accounts"
+type Tab = "members" | "invites" | "service-accounts" | "audit"
 
-export function OrganizationPage() {
+/** An org, with its members, invites, service accounts, and audit log as tabs. The
+ *  audit tab has its own URL (`…/audit-events`), so a link can open it. */
+export function OrganizationPage({ audit = false }: { audit?: boolean }) {
   const { organizationId = "" } = useParams()
+  const navigate = useNavigate()
   const base = path`/organizations/${organizationId}`
   const org = useResource<Organization>(base)
-  const [tab, setTab] = useState<Tab>("members")
+  const [listTab, setListTab] = useState<Exclude<Tab, "audit">>("members")
+  const tab: Tab = audit ? "audit" : listTab
+  function setTab(t: Tab) {
+    if (t === "audit") {
+      navigate(base + "/audit-events")
+      return
+    }
+    setListTab(t)
+    if (audit) navigate(base)
+  }
 
   if (org.loading && !org.data) return <Loading />
   if (!org.data) return <ErrorAlert error={org.error} />
@@ -22,10 +35,7 @@ export function OrganizationPage() {
       <nav className="small mb-2">
         <Link to="/organizations">Organizations</Link>
       </nav>
-      <div className="d-flex align-items-baseline justify-content-between mb-3">
-        <h1 className="h3 mb-0">{org.data.name}</h1>
-        <Link to={path`/organizations/${organizationId}/audit-events`}>Audit log</Link>
-      </div>
+      <h1 className="h3 mb-3">{org.data.name}</h1>
 
       <div className="card mb-4">
         <div className="card-body">
@@ -44,6 +54,7 @@ export function OrganizationPage() {
             ["members", "Members"],
             ["invites", "Invites"],
             ["service-accounts", "Service accounts"],
+            ["audit", "Audit log"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <li className="nav-item" key={key}>
@@ -56,6 +67,7 @@ export function OrganizationPage() {
       {tab === "members" && <Members base={base} />}
       {tab === "invites" && <Invites base={base} />}
       {tab === "service-accounts" && <ServiceAccounts base={base} />}
+      {tab === "audit" && <AuditLog base={base} person={false} />}
     </>
   )
 }
@@ -168,6 +180,7 @@ function Members({ base }: { base: string }) {
             <tr>
               <th>Member</th>
               <th>Principal</th>
+              <th>Role</th>
               <th>Status</th>
               <th>Added</th>
             </tr>
@@ -192,6 +205,7 @@ function Members({ base }: { base: string }) {
                     </>
                   )}
                 </td>
+                <td className="small">{m.role ?? <span className="text-body-secondary">none</span>}</td>
                 <td>
                   <Status value={m.status} />
                 </td>

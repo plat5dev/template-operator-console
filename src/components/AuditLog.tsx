@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link } from "react-router-dom"
 import type { AuditEvent } from "../api/audit"
 import { path } from "../api/client"
 import { usePaged } from "../api/hooks"
@@ -38,10 +38,8 @@ const outcomeClass: Record<string, string> = {
   no_response: "text-bg-secondary",
 }
 
-/** An org's log, or a person's: the route names one of them. */
-export function AuditEventsPage() {
-  const { organizationId, userId } = useParams()
-  const base = userId ? path`/users/${userId}` : path`/organizations/${organizationId ?? ""}`
+/** An org's log, or a person's: `base` is `/organizations/{id}` or `/users/{id}`. */
+export function AuditLog({ base, person }: { base: string; person: boolean }) {
   const [draft, setDraft] = useState(emptyFilters)
   const [applied, setApplied] = useState(emptyFilters)
   const [filterError, setFilterError] = useState<string | null>(null)
@@ -68,19 +66,12 @@ export function AuditEventsPage() {
 
   return (
     <>
-      <nav className="small mb-2">
-        <Link to={userId ? "/users" : "/organizations"}>{userId ? "Users" : "Organizations"}</Link>
-        {" / "}
-        <Link to={base}>
-          <code>{userId ?? organizationId}</code>
-        </Link>
-      </nav>
-      <h1 className="h3 mb-1">Audit log</h1>
       <p className="text-body-secondary small">
-        {userId
+        {person
           ? "What this person did with their account, through user routes. What they did inside an org is in that org's log. "
           : ""}
-        Recorded by the customer gateway. Newest first. A staff call through this console is not in it.
+        Recorded by the customer gateway. Newest first. A staff call through this console is not in it: that is
+        under <Link to="/staff-activity">Staff activity</Link>.
       </p>
 
       <form className="mb-3" onSubmit={apply}>

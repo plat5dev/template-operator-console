@@ -1,10 +1,24 @@
-import { Link } from "react-router-dom"
 import { useAuth } from "../auth/AuthContext"
-import { Field, Fields, Id } from "../components/ui"
+import { Field, Fields } from "../components/ui"
 import { config } from "../config"
+import { OrganizationsPage } from "./OrganizationsPage"
 
 export function HomePage() {
   const { session } = useAuth()
+
+  // Signed in, home is the organizations list: one click to an org, its members, and its
+  // audit log. The connection details sit under it.
+  if (session) {
+    return (
+      <>
+        <OrganizationsPage />
+        <p className="small text-body-secondary mt-4 mb-0">
+          Signed in as {session.email ?? session.sub} · gateway <code>{config.gatewayUrl}</code> · issuer{" "}
+          <code>{config.issuer}</code>
+        </p>
+      </>
+    )
+  }
 
   return (
     <>
@@ -25,31 +39,7 @@ export function HomePage() {
         </div>
       </div>
 
-      {session ? (
-        <div className="card">
-          <div className="card-body">
-            <h2 className="h6">Signed in</h2>
-            <Fields>
-              <Field label="Operator id"><Id value={session.sub} /></Field>
-              <Field label="Email">{session.email ?? "—"}</Field>
-              <Field label="Token expires">{new Date(session.expiresAt).toLocaleString()}</Field>
-            </Fields>
-            <div className="mt-3 d-flex gap-2">
-              <Link className="btn btn-outline-primary btn-sm" to="/organizations">
-                Organizations
-              </Link>
-              <Link className="btn btn-outline-primary btn-sm" to="/users">
-                Look up a user
-              </Link>
-              <Link className="btn btn-outline-secondary btn-sm" to="/request">
-                Raw request
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <p>Sign in with your staff IdP to start.</p>
-      )}
+      <p>Sign in with your staff IdP to start.</p>
     </>
   )
 }
