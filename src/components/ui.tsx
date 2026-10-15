@@ -1,55 +1,104 @@
 import type { ReactNode } from "react"
 
 export function When({ at }: { at: string | null | undefined }) {
-  if (!at) return <span className="text-body-secondary">—</span>
+  if (!at) return <span className="muted">—</span>
   return <time dateTime={at} title={at}>{new Date(at).toLocaleString()}</time>
 }
 
 export function Id({ value }: { value: string | null | undefined }) {
-  if (!value) return <span className="text-body-secondary">—</span>
-  return <code className="user-select-all">{value}</code>
+  if (!value) return <span className="muted">—</span>
+  return <code className="select-all">{value}</code>
 }
 
-const statusClass: Record<string, string> = {
-  active: "text-bg-success",
-  suspended: "text-bg-warning",
-  removed: "text-bg-secondary",
-  redeemed: "text-bg-info",
-  revoked: "text-bg-secondary",
-  expired: "text-bg-secondary",
-}
-
+/** State by shape: filled is active, hollow is paused, struck is over. */
 export function Status({ value }: { value: string }) {
-  return <span className={`badge ${statusClass[value] ?? "text-bg-light"}`}>{value}</span>
+  return <span className={`status status-${value}`}>{value}</span>
 }
 
 /** A two-column list of a resource's fields. Children are <Field>s. */
 export function Fields({ children }: { children: ReactNode }) {
-  return <dl className="row mb-0">{children}</dl>
+  return <dl className="fields">{children}</dl>
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <dt className="col-sm-3 text-body-secondary fw-normal">{label}</dt>
-      <dd className="col-sm-9">{children}</dd>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
     </>
   )
 }
 
 export function Loading() {
-  return <div className="text-body-secondary small py-2">Loading…</div>
+  return <div className="loading">Loading…</div>
 }
 
 export function LoadMore({ show, loading, onClick }: { show: boolean; loading: boolean; onClick: () => void }) {
   if (!show) return null
   return (
-    <button type="button" className="btn btn-outline-secondary btn-sm" disabled={loading} onClick={onClick}>
-      {loading ? "Loading…" : "Load more"}
-    </button>
+    <div>
+      <button type="button" className="btn btn-sm" disabled={loading} onClick={onClick}>
+        {loading ? "Loading…" : "Load more"}
+      </button>
+    </div>
   )
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-body-secondary small mb-0">{children}</p>
+  return <div className="list empty">{children}</div>
+}
+
+/** A page's title row: crumbs and an eyebrow above, actions on the right. */
+export function PageHead({
+  title,
+  lede,
+  eyebrow,
+  crumbs,
+  actions,
+}: {
+  title: ReactNode
+  lede?: ReactNode
+  eyebrow?: ReactNode
+  crumbs?: ReactNode
+  actions?: ReactNode
+}) {
+  return (
+    <header className="page-head">
+      <div className="grow">
+        {crumbs && <nav className="crumbs" aria-label="Breadcrumb">{crumbs}</nav>}
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <h1>{title}</h1>
+        {lede && <p className="lede">{lede}</p>}
+      </div>
+      {actions && <div className="page-actions">{actions}</div>}
+    </header>
+  )
+}
+
+/** Tabs as buttons. The current one is underlined. */
+export function Tabs<T extends string>({
+  tabs,
+  current,
+  onChange,
+}: {
+  tabs: [T, string][]
+  current: T
+  onChange: (t: T) => void
+}) {
+  return (
+    <div className="tabs" role="tablist">
+      {tabs.map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          role="tab"
+          aria-selected={current === key}
+          className="tab"
+          onClick={() => onChange(key)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
 }

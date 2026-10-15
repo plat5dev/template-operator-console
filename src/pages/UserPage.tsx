@@ -6,7 +6,7 @@ import type { Membership, Organization, OrganizationRef, User } from "../api/ide
 import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { KeysTable } from "../components/KeysTable"
-import { Empty, Field, Fields, Id, LoadMore, Loading, Status, When } from "../components/ui"
+import { Empty, Field, Fields, Id, LoadMore, Loading, PageHead, Status, Tabs, When } from "../components/ui"
 
 type Tab = "memberships" | "keys" | "audit"
 
@@ -29,33 +29,33 @@ export function UserPage({ audit = false }: { audit?: boolean }) {
 
   return (
     <>
-      <nav className="small mb-2">
-        <Link to="/users">Users</Link>
-      </nav>
-      <h1 className="h3 mb-3">
-        User <Id value={userId} />
-      </h1>
+      <PageHead
+        crumbs={
+          <>
+            <Link to="/users">Users</Link>
+            <span>User</span>
+          </>
+        }
+        eyebrow={<Id value={userId} />}
+        title="User"
+      />
 
       <Person base={base} />
 
-      <ul className="nav nav-tabs mb-3">
-        {(
-          [
+      <div className="stack">
+        <Tabs
+          tabs={[
             ["memberships", "Memberships"],
             ["keys", "User API keys"],
             ["audit", "Audit log"],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <li className="nav-item" key={key}>
-            <button type="button" className={`nav-link ${tab === key ? "active" : ""}`} onClick={() => setTab(key)}>
-              {label}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {tab === "memberships" && <Memberships base={base} />}
-      {tab === "keys" && <KeysTable base={base + "/api-keys"} />}
-      {tab === "audit" && <AuditLog base={base} person />}
+          ]}
+          current={tab}
+          onChange={setTab}
+        />
+        {tab === "memberships" && <Memberships base={base} />}
+        {tab === "keys" && <KeysTable base={base + "/api-keys"} />}
+        {tab === "audit" && <AuditLog base={base} person />}
+      </div>
     </>
   )
 }
@@ -70,7 +70,8 @@ function Memberships({ base }: { base: string }) {
       ) : memberships.items.length === 0 ? (
         <Empty>No active memberships.</Empty>
       ) : (
-        <table className="table table-sm align-middle">
+        <div className="table-wrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Organization</th>
@@ -96,6 +97,7 @@ function Memberships({ base }: { base: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={memberships.hasMore} loading={memberships.loading} onClick={() => void memberships.loadMore()} />
       <CreateOrganization base={base} />
@@ -143,21 +145,21 @@ function Person({ base }: { base: string }) {
   const u = user.data
 
   return (
-    <div className="card mb-4">
+    <div className="card">
       <div className="card-body">
         <ErrorAlert error={error} onDismiss={() => setError(null)} />
         <Fields>
           <Field label="Name">
             {name === null ? (
               <>
-                {u.display_name ?? <span className="text-body-secondary">none</span>}{" "}
-                <button type="button" className="btn btn-link btn-sm p-0 ms-1" onClick={() => setName(u.display_name ?? "")}>
+                {u.display_name ?? <span className="muted">none</span>}{" "}
+                <button type="button" className="btn-link small" onClick={() => setName(u.display_name ?? "")}>
                   Edit
                 </button>
               </>
             ) : (
               <form
-                className="d-flex gap-2"
+                className="cluster"
                 style={{ maxWidth: "28rem" }}
                 onSubmit={(e) => {
                   e.preventDefault()
@@ -166,7 +168,8 @@ function Person({ base }: { base: string }) {
                 }}
               >
                 <input
-                  className="form-control form-control-sm"
+                  className="input input-sm grow"
+                  aria-label="Name"
                   value={name}
                   maxLength={128}
                   placeholder="Empty clears it"
@@ -174,7 +177,7 @@ function Person({ base }: { base: string }) {
                   autoFocus
                 />
                 <button type="submit" className="btn btn-primary btn-sm">Save</button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setName(null)}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setName(null)}>
                   Cancel
                 </button>
               </form>
@@ -185,10 +188,10 @@ function Person({ base }: { base: string }) {
           <Field label="Updated"><When at={u.updated_at} /></Field>
         </Fields>
         {handoff && (
-          <div className="alert alert-warning small mt-3 mb-0">
+          <div className="alert alert-warn">
             Not deleted: this person is the last member, or the last holder of the creator role, of these
             organizations. Hand them off or delete them first.
-            <ul className="mb-0">
+            <ul>
               {handoff.map((o) => (
                 <li key={o.id}>
                   <Link to={path`/organizations/${o.id}`}>{o.name}</Link>
@@ -197,21 +200,21 @@ function Person({ base }: { base: string }) {
             </ul>
           </div>
         )}
-        <div className="mt-3 pt-3 border-top d-flex gap-2">
-          {u.status === "active" && (
-            <button type="button" className="btn btn-outline-warning btn-sm" onClick={() => void update(base + "/status", { status: "suspended" })}>
-              Suspend
-            </button>
-          )}
-          {u.status === "suspended" && (
-            <button type="button" className="btn btn-outline-success btn-sm" onClick={() => void update(base + "/status", { status: "active" })}>
-              Reactivate
-            </button>
-          )}
-          <button type="button" className="btn btn-outline-danger btn-sm ms-auto" onClick={() => void remove()}>
-            Delete account
+      </div>
+      <div className="card-foot">
+        {u.status === "active" && (
+          <button type="button" className="btn btn-sm" onClick={() => void update(base + "/status", { status: "suspended" })}>
+            Suspend
           </button>
-        </div>
+        )}
+        {u.status === "suspended" && (
+          <button type="button" className="btn btn-sm" onClick={() => void update(base + "/status", { status: "active" })}>
+            Reactivate
+          </button>
+        )}
+        <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
+          Delete account
+        </button>
       </div>
     </div>
   )
@@ -235,17 +238,18 @@ function CreateOrganization({ base }: { base: string }) {
   }
 
   return (
-    <form className="mt-3" onSubmit={(e) => void create(e)}>
+    <form className="stack-sm" onSubmit={(e) => void create(e)}>
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
-      <div className="d-flex gap-2" style={{ maxWidth: "32rem" }}>
+      <div className="input-group" style={{ maxWidth: "32rem" }}>
         <input
-          className="form-control form-control-sm"
+          className="input"
+          aria-label="New organization name"
           placeholder="New organization name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <button type="submit" className="btn btn-outline-primary btn-sm text-nowrap">
+        <button type="submit" className="btn">
           Create for this user
         </button>
       </div>

@@ -4,7 +4,7 @@ import { path } from "../api/client"
 import { usePaged } from "../api/hooks"
 import type { User } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
-import { Empty, Id, LoadMore, Loading, Status, When } from "../components/ui"
+import { Empty, Id, LoadMore, Loading, PageHead, Status, When } from "../components/ui"
 
 /** Every person in the directory. Staff only: customers cannot list people. */
 export function UsersPage() {
@@ -19,16 +19,21 @@ export function UsersPage() {
 
   return (
     <>
-      <h1 className="h3 mb-3">Users</h1>
-      <form className="d-flex gap-2 mb-3" style={{ maxWidth: "32rem" }} onSubmit={open}>
+      <PageHead
+        eyebrow="/users"
+        title="Users"
+        lede="Every person in the directory. Staff only: customers cannot list people."
+      />
+      <form className="input-group" style={{ maxWidth: "32rem" }} onSubmit={open}>
         <input
-          className="form-control form-control-sm"
+          className="input mono"
+          aria-label="Open a user by id"
           placeholder="user_id"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
           required
         />
-        <button type="submit" className="btn btn-outline-primary btn-sm">
+        <button type="submit" className="btn">
           Open
         </button>
       </form>
@@ -38,7 +43,8 @@ export function UsersPage() {
       ) : list.items.length === 0 ? (
         <Empty>No users.</Empty>
       ) : (
-        <table className="table table-hover align-middle">
+        <div className="table-wrap">
+        <table className="table hover">
           <thead>
             <tr>
               <th>Name</th>
@@ -52,7 +58,7 @@ export function UsersPage() {
               <tr key={u.id}>
                 <td>
                   <Link to={path`/users/${u.id}`}>
-                    {u.display_name ?? <span className="text-body-secondary">(no name yet)</span>}
+                    {u.display_name ?? <span className="muted">(no name yet)</span>}
                   </Link>
                 </td>
                 <td className="small">
@@ -61,13 +67,14 @@ export function UsersPage() {
                 <td>
                   <Status value={u.status} />
                 </td>
-                <td className="small">
+                <td className="small text-2">
                   <When at={u.created_at} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>

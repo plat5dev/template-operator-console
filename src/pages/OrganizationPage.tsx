@@ -5,7 +5,8 @@ import { usePaged, useResource } from "../api/hooks"
 import type { Invite, Member, Organization, ServiceAccount } from "../api/identity"
 import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
-import { Empty, Field, Fields, Id, LoadMore, Loading, Status, When } from "../components/ui"
+import { initials } from "../components/initials"
+import { Empty, Id, LoadMore, Loading, PageHead, Status, Tabs, When } from "../components/ui"
 
 type Tab = "members" | "invites" | "service-accounts" | "audit"
 
@@ -32,42 +33,39 @@ export function OrganizationPage({ audit = false }: { audit?: boolean }) {
 
   return (
     <>
-      <nav className="small mb-2">
-        <Link to="/organizations">Organizations</Link>
-      </nav>
-      <h1 className="h3 mb-3">{org.data.name}</h1>
+      <PageHead
+        crumbs={
+          <>
+            <Link to="/organizations">Organizations</Link>
+            <span>{org.data.name}</span>
+          </>
+        }
+        eyebrow={
+          <>
+            <Id value={org.data.id} /> · created <When at={org.data.created_at} />
+          </>
+        }
+        title={org.data.name}
+      />
 
-      <div className="card mb-4">
-        <div className="card-body">
-          <Fields>
-            <Field label="Id"><Id value={org.data.id} /></Field>
-            <Field label="Created"><When at={org.data.created_at} /></Field>
-            <Field label="Updated"><When at={org.data.updated_at} /></Field>
-          </Fields>
-          <EditOrganization base={base} org={org.data} onSaved={org.setData} />
-        </div>
-      </div>
+      <EditOrganization base={base} org={org.data} onSaved={org.setData} />
 
-      <ul className="nav nav-tabs mb-3">
-        {(
-          [
+      <div className="stack">
+        <Tabs
+          tabs={[
             ["members", "Members"],
             ["invites", "Invites"],
             ["service-accounts", "Service accounts"],
             ["audit", "Audit log"],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <li className="nav-item" key={key}>
-            <button type="button" className={`nav-link ${tab === key ? "active" : ""}`} onClick={() => setTab(key)}>
-              {label}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {tab === "members" && <Members base={base} />}
-      {tab === "invites" && <Invites base={base} />}
-      {tab === "service-accounts" && <ServiceAccounts base={base} />}
-      {tab === "audit" && <AuditLog base={base} person={false} />}
+          ]}
+          current={tab}
+          onChange={setTab}
+        />
+        {tab === "members" && <Members base={base} />}
+        {tab === "invites" && <Invites base={base} />}
+        {tab === "service-accounts" && <ServiceAccounts base={base} />}
+        {tab === "audit" && <AuditLog base={base} person={false} />}
+      </div>
     </>
   )
 }
@@ -106,22 +104,18 @@ function EditOrganization({ base, org, onSaved }: { base: string; org: Organizat
   }
 
   return (
-    <form className="mt-3 pt-3 border-top" onSubmit={(e) => void save(e)}>
-      <ErrorAlert error={error} onDismiss={() => setError(null)} />
-      <div className="row g-2 align-items-end">
-        <div className="col-md-8">
-          <label className="form-label small">Name</label>
-          <input className="form-control form-control-sm" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="col-md-4 d-flex gap-2">
-          <button
-            type="submit"
-            className="btn btn-primary btn-sm"
-            disabled={busy || name === org.name}
-          >
+    <form className="card" onSubmit={(e) => void save(e)}>
+      <div className="card-body">
+        <ErrorAlert error={error} onDismiss={() => setError(null)} />
+        <div className="form-row">
+          <div className="field">
+            <label htmlFor="org_name">Name</label>
+            <input id="org_name" className="input" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={busy || name === org.name}>
             Save
           </button>
-          <button type="button" className="btn btn-outline-danger btn-sm ms-auto" onClick={() => void remove()}>
+          <button type="button" className="btn btn-danger end" onClick={() => void remove()}>
             Delete organization
           </button>
         </div>
@@ -151,22 +145,24 @@ function Members({ base }: { base: string }) {
   return (
     <>
       <ErrorAlert error={list.error || error} onDismiss={error ? () => setError(null) : undefined} />
-      <form className="d-flex gap-2 mb-3" style={{ maxWidth: "40rem" }} onSubmit={(e) => void add(e)}>
+      <form className="form-row" style={{ maxWidth: "44rem" }} onSubmit={(e) => void add(e)}>
         <input
-          className="form-control form-control-sm"
+          className="input grow"
+          aria-label="IdP issuer"
           placeholder="IdP issuer"
           value={issuer}
           onChange={(e) => setIssuer(e.target.value)}
           required
         />
         <input
-          className="form-control form-control-sm"
+          className="input grow"
+          aria-label="IdP subject"
           placeholder="IdP subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           required
         />
-        <button type="submit" className="btn btn-outline-primary btn-sm text-nowrap">
+        <button type="submit" className="btn">
           Add member
         </button>
       </form>
@@ -175,7 +171,8 @@ function Members({ base }: { base: string }) {
       ) : list.items.length === 0 ? (
         <Empty>No members.</Empty>
       ) : (
-        <table className="table table-sm align-middle">
+        <div className="table-wrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Member</th>
@@ -189,12 +186,17 @@ function Members({ base }: { base: string }) {
             {list.items.map((m) => (
               <tr key={m.id}>
                 <td>
-                  <Link to={path`/members/${m.id}`}>
-                    {m.display_name ?? <span className="text-body-secondary">(no name yet)</span>}
-                  </Link>
-                  <div>
-                    <Id value={m.id} />
-                  </div>
+                  <span className="who">
+                    <span className={`avatar${m.principal === "user" ? "" : " square"}`}>
+                      {m.principal === "user" ? initials(m.display_name ?? "?") : "SA"}
+                    </span>
+                    <span>
+                      <Link className="list-title" to={path`/members/${m.id}`}>
+                        {m.display_name ?? <span className="muted">(no name yet)</span>}
+                      </Link>
+                      <span className="sub mono">{m.id}</span>
+                    </span>
+                  </span>
                 </td>
                 <td className="small">
                   {m.principal === "user" ? (
@@ -203,7 +205,7 @@ function Members({ base }: { base: string }) {
                     <Link to={base + path`/service-accounts/${m.service_account_id ?? ""}`}>service account</Link>
                   )}
                 </td>
-                <td className="small">{m.role ?? <span className="text-body-secondary">none</span>}</td>
+                <td className="small">{m.role ?? <span className="muted">none</span>}</td>
                 <td>
                   <Status value={m.status} />
                 </td>
@@ -214,6 +216,7 @@ function Members({ base }: { base: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>
@@ -243,7 +246,8 @@ function Invites({ base }: { base: string }) {
       ) : list.items.length === 0 ? (
         <Empty>No invites.</Empty>
       ) : (
-        <table className="table table-sm align-middle">
+        <div className="table-wrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Prefix</th>
@@ -260,7 +264,7 @@ function Invites({ base }: { base: string }) {
                 <td>
                   <code>{inv.token_prefix}…</code>
                 </td>
-                <td className="small">{inv.email ?? <span className="text-body-secondary">any</span>}</td>
+                <td className="small">{inv.email ?? <span className="muted">any</span>}</td>
                 <td>
                   <Status value={inv.status} />
                 </td>
@@ -271,9 +275,9 @@ function Invites({ base }: { base: string }) {
                 <td className="small">
                   <When at={inv.expires_at} />
                 </td>
-                <td className="text-end">
+                <td className="actions">
                   {inv.status === "active" && (
-                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => void revoke(inv)}>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => void revoke(inv)}>
                       Revoke
                     </button>
                   )}
@@ -282,6 +286,7 @@ function Invites({ base }: { base: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>
@@ -299,7 +304,8 @@ function ServiceAccounts({ base }: { base: string }) {
       ) : list.items.length === 0 ? (
         <Empty>No service accounts.</Empty>
       ) : (
-        <table className="table table-sm align-middle">
+        <div className="table-wrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Name</th>
@@ -327,6 +333,7 @@ function ServiceAccounts({ base }: { base: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>

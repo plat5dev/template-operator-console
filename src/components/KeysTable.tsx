@@ -3,7 +3,7 @@ import { api, path } from "../api/client"
 import { usePaged } from "../api/hooks"
 import type { ApiKey } from "../api/identity"
 import { ErrorAlert } from "./ErrorAlert"
-import { Empty, LoadMore, Loading, When } from "./ui"
+import { Empty, LoadMore, Loading, Status, When } from "./ui"
 
 /**
  * API keys under a user, member, or service account. Listing and revoking only:
@@ -32,7 +32,8 @@ export function KeysTable({ base }: { base: string }) {
       ) : list.items.length === 0 ? (
         <Empty>No API keys.</Empty>
       ) : (
-        <table className="table table-sm align-middle">
+        <div className="table-wrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Name</th>
@@ -49,15 +50,15 @@ export function KeysTable({ base }: { base: string }) {
                 <td>
                   <code>{k.key_prefix}…</code>
                 </td>
-                <td className="small">
+                <td className="small text-2">
                   <When at={k.created_at} />
                 </td>
-                <td className="small">
-                  <When at={k.revoked_at} />
+                <td className="small text-2">
+                  {k.revoked_at ? <When at={k.revoked_at} /> : <Status value="active" />}
                 </td>
-                <td className="text-end">
+                <td className="actions">
                   {!k.revoked_at && (
-                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => void revoke(k)}>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => void revoke(k)}>
                       Revoke
                     </button>
                   )}
@@ -66,6 +67,7 @@ export function KeysTable({ base }: { base: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>

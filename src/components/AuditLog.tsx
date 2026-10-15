@@ -31,11 +31,12 @@ const emptyFilters: Filters = {
   before: "",
 }
 
+// Pending is unknown, never success: dashed. Refused: red.
 const outcomeClass: Record<string, string> = {
-  pending: "text-bg-warning",
-  rejected: "text-bg-danger",
-  responded: "text-bg-light",
-  no_response: "text-bg-secondary",
+  pending: "badge-dashed",
+  rejected: "badge-danger",
+  responded: "",
+  no_response: "badge-dashed",
 }
 
 /** An org's log, or a person's: `base` is `/organizations/{id}` or `/users/{id}`. */
@@ -67,7 +68,7 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
 
   return (
     <>
-      <p className="text-body-secondary small">
+      <p className="section-lede">
         {person
           ? "What this person did with their account, through user routes. What they did inside an org is in that org's log. "
           : ""}
@@ -75,9 +76,9 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
         under <Link to="/staff-activity">Staff activity</Link>.
       </p>
 
-      <form className="mb-3" onSubmit={apply}>
-        {filterError && <div className="alert alert-danger py-2 small">{filterError}</div>}
-        <div className="row g-2 align-items-end">
+      <form className="inset" onSubmit={apply}>
+        {filterError && <div className="alert alert-error">{filterError}</div>}
+        <div className="form-row">
           <TextFilter label="Service" value={draft.service} onChange={(service) => setDraft({ ...draft, service })} />
           <SelectFilter
             label="Method"
@@ -119,11 +120,11 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
             value={draft.before}
             onChange={(before) => setDraft({ ...draft, before })}
           />
-          <div className="col-auto d-flex gap-2">
+          <div className="cluster">
             <button type="submit" className="btn btn-primary btn-sm">
               Filter
             </button>
-            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={clear}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={clear}>
               Clear
             </button>
           </div>
@@ -136,8 +137,8 @@ export function AuditLog({ base, person }: { base: string; person: boolean }) {
       ) : list.items.length === 0 ? (
         <Empty>{hasFilter(applied) ? "No audit events match these filters." : "No audit events."}</Empty>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-sm align-middle">
+        <div className="table-wrap">
+          <table className="table">
             <thead>
               <tr>
                 <th>When</th>
@@ -182,7 +183,7 @@ function EventRows({
   return (
     <>
       <tr>
-        <td className="small text-nowrap">
+        <td className="small nowrap text-2">
           <When at={event.occurred_at} />
         </td>
         <td className="small">
@@ -193,7 +194,7 @@ function EventRows({
           ) : (
             "the person"
           )}
-          <div className="text-body-secondary">
+          <div className="sub">
             {name?.serviceAccount && "service account · "}
             {actor.auth_type}
             {actor.key_prefix && ` · ${actor.key_prefix}`}
@@ -203,22 +204,24 @@ function EventRows({
           <div>
             <code>{event.method}</code> <code>{event.route}</code>
           </div>
-          <Id value={event.request_id} />
+          <span className="sub mono">{event.request_id}</span>
         </td>
         <td className="small">{event.service}</td>
-        <td className="text-nowrap">
-          <span className={`badge ${outcomeClass[event.outcome] ?? "text-bg-light"}`}>{event.outcome}</span>
-          {event.status !== null && <span className="small ms-1">{event.status}</span>}
+        <td className="nowrap">
+          <span className={`badge ${outcomeClass[event.outcome] ?? ""}`}>
+            {event.outcome}
+            {event.status !== null && ` ${event.status}`}
+          </span>
         </td>
-        <td className="text-end">
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onToggle}>
+        <td className="actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onToggle}>
             {open ? "Hide" : "Details"}
           </button>
         </td>
       </tr>
       {open && (
         <tr>
-          <td colSpan={6} className="bg-body-tertiary">
+          <td colSpan={6} className="detail">
             <EventDetails event={event} />
           </td>
         </tr>
@@ -260,7 +263,7 @@ function EventDetails({ event }: { event: AuditEvent }) {
         {event.details == null ? (
           "—"
         ) : (
-          <pre className="small mb-0" style={{ whiteSpace: "pre-wrap" }}>
+          <pre className="pre wrap">
             {JSON.stringify(event.details, null, 2)}
           </pre>
         )}
@@ -283,10 +286,10 @@ function TextFilter({
   type?: string
 }) {
   return (
-    <div className="col-6 col-lg">
-      <label className="form-label small mb-1">{label}</label>
+    <div className="field">
+      <label className="small">{label}</label>
       <input
-        className="form-control form-control-sm"
+        className="input input-sm"
         type={type}
         value={value}
         placeholder={placeholder}
@@ -309,9 +312,9 @@ function SelectFilter({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="col-6 col-lg">
-      <label className="form-label small mb-1">{label}</label>
-      <select className="form-select form-select-sm" value={value} onChange={(e) => onChange(e.target.value)}>
+    <div className="field">
+      <label className="small">{label}</label>
+      <select className="select select-sm" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Any</option>
         {options.map((option) => (
           <option key={option} value={option}>

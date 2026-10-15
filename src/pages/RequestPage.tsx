@@ -2,15 +2,14 @@ import { useState, type FormEvent } from "react"
 import { useSearchParams } from "react-router-dom"
 import { send, type RawResponse } from "../api/client"
 import { ErrorAlert } from "../components/ErrorAlert"
+import { PageHead } from "../components/ui"
 import { config } from "../config"
 
 const methods = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 const withBody = new Set(["POST", "PUT", "PATCH", "DELETE"])
 
 function statusClass(status: number): string {
-  if (status < 300) return "text-bg-success"
-  if (status < 500) return "text-bg-warning"
-  return "text-bg-danger"
+  return status < 400 ? "" : "badge-danger"
 }
 
 /**
@@ -65,12 +64,16 @@ export function RequestPage() {
 
   return (
     <>
-      <h1 className="h3 mb-3">Request</h1>
-      <form onSubmit={(e) => void submit(e)}>
-        <div className="input-group mb-2">
+      <PageHead
+        eyebrow="any route"
+        title="Request"
+        lede="Any method, any path, through the operator gateway with your staff token. For routes without a page, and for seeing exactly what the gateway answers."
+      />
+      <form className="stack-sm" onSubmit={(e) => void submit(e)}>
+        <div className="input-group">
           <select
-            className="form-select flex-grow-0"
-            style={{ width: "8rem" }}
+            className="select auto"
+            style={{ width: "7.5rem" }}
             value={method}
             onChange={(e) => setMethod(e.target.value)}
             aria-label="Method"
@@ -80,13 +83,13 @@ export function RequestPage() {
             ))}
           </select>
           <span
-            className="input-group-text font-monospace small bg-body-secondary text-body-secondary user-select-none"
+            className="addon"
             title="The operator gateway. Enter the path after it."
           >
             {config.gatewayUrl}
           </span>
           <input
-            className="form-control font-monospace"
+            className="input mono"
             value={rawTarget}
             onChange={(e) => setTarget(e.target.value)}
             aria-label="Path on the gateway"
@@ -99,7 +102,7 @@ export function RequestPage() {
         </div>
         {withBody.has(method) && (
           <textarea
-            className="form-control font-monospace small mb-2"
+            className="textarea mono"
             rows={6}
             placeholder='{ "name": "..." }'
             value={body}
@@ -112,19 +115,21 @@ export function RequestPage() {
 
       <ErrorAlert error={error} />
       {res && (
-        <div className="card mt-3">
-          <div className="card-header d-flex flex-wrap gap-3 align-items-center small">
-            <span className={`badge ${statusClass(res.status)}`}>{res.status}</span>
-            <span>{res.ms} ms</span>
-            {res.requestId && (
-              <span>
-                request_id <code className="user-select-all">{res.requestId}</code>
-              </span>
-            )}
-            {res.headers.get("Content-Type") && <span className="text-body-secondary">{res.headers.get("Content-Type")}</span>}
+        <div className="card">
+          <div className="card-head small">
+            <span className="cluster" style={{ gap: "1rem" }}>
+              <span className={`badge ${statusClass(res.status)}`}>{res.status}</span>
+              <span className="text-2">{res.ms} ms</span>
+              {res.requestId && (
+                <span className="text-2">
+                  request_id <code className="select-all">{res.requestId}</code>
+                </span>
+              )}
+            </span>
+            {res.headers.get("Content-Type") && <span className="muted mono">{res.headers.get("Content-Type")}</span>}
           </div>
-          <pre className="card-body mb-0 small" style={{ maxHeight: "60vh", overflow: "auto" }}>
-            {res.body !== null ? JSON.stringify(res.body, null, 2) : res.text || <span className="text-body-secondary">(empty)</span>}
+          <pre className="pre" style={{ maxHeight: "60vh", borderRadius: "0 0 var(--radius) var(--radius)" }}>
+            {res.body !== null ? JSON.stringify(res.body, null, 2) : res.text || "(empty)"}
           </pre>
         </div>
       )}

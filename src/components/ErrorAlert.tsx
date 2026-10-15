@@ -17,7 +17,7 @@ export function ErrorAlert({ error, onDismiss }: { error: unknown; onDismiss?: (
   if (!(error instanceof ApiError)) {
     const message = error instanceof Error ? error.message : String(error)
     return (
-      <div className="alert alert-danger" role="alert">
+      <div className="alert alert-error" role="alert">
         {message}
       </div>
     )
@@ -32,16 +32,17 @@ export function ErrorAlert({ error, onDismiss }: { error: unknown; onDismiss?: (
     .join(" · ")
 
   return (
-    <div className="alert alert-danger" role="alert">
-      <div className="d-flex">
-        <div className="flex-grow-1">
-          <strong className="me-2">{error.code}</strong>
-          {error.message}
-          {hints[error.status] && <div className="small mt-1">{hints[error.status]}</div>}
-          <div className="small font-monospace mt-1">{meta}</div>
-        </div>
-        {onDismiss && <button type="button" className="btn-close" aria-label="Close" onClick={onDismiss} />}
+    <div className={`alert alert-error${onDismiss ? " has-close" : ""}`} role="alert">
+      <div>
+        <span className="alert-title">{error.code}</span> {error.message}
       </div>
+      {hints[error.status] && <div className="small">{hints[error.status]}</div>}
+      <div className="alert-meta">{meta}</div>
+      {onDismiss && (
+        <button type="button" className="alert-close" aria-label="Close" onClick={onDismiss}>
+          ×
+        </button>
+      )}
     </div>
   )
 }

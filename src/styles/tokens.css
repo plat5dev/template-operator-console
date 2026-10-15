@@ -1,0 +1,110 @@
+/*
+ * Design tokens. Paper, ink, and type come from plat5.com (web/src/styles/tokens.css).
+ * The accent is the staff plane's amber, so nobody mistakes this console for the product.
+ *
+ * Light is the default. Dark applies when the person chose it (data-theme="dark") or,
+ * otherwise, when the system asks for it. The console stores no choice: it follows the system.
+ */
+
+:root {
+  color-scheme: light;
+
+  --ink: #0f1013;
+  --paper: #f2f2ef;
+
+  /* Accent: amber, the staff plane. The top bar, primary buttons, the active page, and the wordmark's bar. */
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-text: #9a4a06;
+  --accent-wash: rgb(180 83 9 / 0.1);
+  --on-accent: #fffaf2;
+
+  /* Surfaces */
+  --bg: var(--paper);
+  --surface: #fafaf8;
+  --surface-2: #e9e9e5;
+  --rule: #dadad5;
+  --rule-strong: #c4c4be;
+  --field: #ffffff;
+
+  /* Text */
+  --text: var(--ink);
+  --text-2: #45474d;
+  --muted: #6a6c72;
+
+  /* Functional colors. Status is shown by shape, so these are for errors, warnings, and saves. */
+  --danger: #c93636;
+  --danger-wash: rgb(201 54 54 / 0.08);
+  --warn: #8a5a00;
+  --warn-wash: rgb(180 120 0 / 0.1);
+  --ok: #1f7a4d;
+  --ok-wash: rgb(31 122 77 / 0.09);
+
+  /* Code is on ink in both themes. */
+  --code-bg: var(--ink);
+  --code-text: #e6e6e2;
+
+  --font-sans: "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --side-w: 15rem;
+  --shadow: 0 1px 0 var(--rule), 0 16px 40px -28px rgb(15 16 19 / 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --accent: #f59e0b;
+    --accent-hover: #fbbf24;
+    --accent-text: #fbbf24;
+    --accent-wash: rgb(245 158 11 / 0.13);
+    --on-accent: var(--ink);
+    --bg: var(--ink);
+    --surface: #16171b;
+    --surface-2: #1d1f24;
+    --rule: #2a2c31;
+    --rule-strong: #3a3c42;
+    --field: #0f1013;
+    --text: var(--paper);
+    --text-2: #b9bab6;
+    --muted: #8c8e92;
+    --danger: #ff6b6b;
+    --danger-wash: rgb(255 107 107 / 0.1);
+    --warn: #f0b429;
+    --warn-wash: rgb(240 180 41 / 0.1);
+    --ok: #4cc38a;
+    --ok-wash: rgb(76 195 138 / 0.1);
+    --code-bg: #0a0b0d;
+    --shadow: 0 1px 0 var(--rule), 0 16px 40px -28px rgb(0 0 0 / 0.8);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-text: #fbbf24;
+  --accent-wash: rgb(245 158 11 / 0.13);
+  --on-accent: var(--ink);
+  --bg: var(--ink);
+  --surface: #16171b;
+  --surface-2: #1d1f24;
+  --rule: #2a2c31;
+  --rule-strong: #3a3c42;
+  --field: #0f1013;
+  --text: var(--paper);
+  --text-2: #b9bab6;
+  --muted: #8c8e92;
+  --danger: #ff6b6b;
+  --danger-wash: rgb(255 107 107 / 0.1);
+  --warn: #f0b429;
+  --warn-wash: rgb(240 180 41 / 0.1);
+  --ok: #4cc38a;
+  --ok-wash: rgb(76 195 138 / 0.1);
+  --code-bg: #0a0b0d;
+  --shadow: 0 1px 0 var(--rule), 0 16px 40px -28px rgb(0 0 0 / 0.8);
+}

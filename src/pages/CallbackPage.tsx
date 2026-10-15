@@ -19,11 +19,11 @@ export function CallbackPage() {
       .catch(setError)
   }, [navigate, refresh])
 
-  if (!error) return <p className="text-body-secondary">Signing in…</p>
+  if (!error) return <div className="loading-page">Signing in…</div>
   return (
-    <>
+    <div className="stack narrow">
       <ErrorAlert error={error} />
       <Link to="/">Back</Link>
-    </>
+    </div>
   )
 }

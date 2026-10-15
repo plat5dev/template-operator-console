@@ -5,7 +5,7 @@ import { useResource } from "../api/hooks"
 import type { ServiceAccount } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { KeysTable } from "../components/KeysTable"
-import { Field, Fields, Id, Loading, Status, When } from "../components/ui"
+import { Field, Fields, Id, Loading, PageHead, Status, When } from "../components/ui"
 
 export function ServiceAccountPage() {
   const { organizationId = "", serviceAccountId = "" } = useParams()
@@ -45,13 +45,20 @@ export function ServiceAccountPage() {
 
   return (
     <>
-      <nav className="small mb-2">
-        <Link to={org}>Organization</Link>
-      </nav>
-      <h1 className="h3 mb-3">{s.name}</h1>
+      <PageHead
+        crumbs={
+          <>
+            <Link to={org}>Organization</Link>
+            <span>Service account</span>
+          </>
+        }
+        eyebrow={<Id value={s.id} />}
+        title={s.name}
+        actions={<Status value={s.status} />}
+      />
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
-      <div className="card mb-4">
+      <div className="card">
         <div className="card-body">
           <Fields>
             <Field label="Id"><Id value={s.id} /></Field>
@@ -60,10 +67,12 @@ export function ServiceAccountPage() {
             <Field label="Created"><When at={s.created_at} /></Field>
             <Field label="Updated"><When at={s.updated_at} /></Field>
           </Fields>
-          <p className="small text-body-secondary mt-2 mb-0">Suspend or reactivate it from its member page.</p>
-          <form className="mt-3 pt-3 border-top d-flex gap-2" onSubmit={(e) => void rename(e)}>
+          <p className="small muted">Suspend or reactivate it from its member page.</p>
+        </div>
+        <form className="card-foot" onSubmit={(e) => void rename(e)}>
             <input
-              className="form-control form-control-sm"
+              className="input input-sm auto"
+              aria-label="Name"
               style={{ maxWidth: "20rem" }}
               value={name ?? s.name}
               onChange={(e) => setName(e.target.value)}
@@ -72,14 +81,13 @@ export function ServiceAccountPage() {
             <button type="submit" className="btn btn-primary btn-sm" disabled={name === null || name === s.name}>
               Rename
             </button>
-            <button type="button" className="btn btn-outline-danger btn-sm ms-auto" onClick={() => void remove()}>
+            <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
               Remove service account
             </button>
-          </form>
-        </div>
+        </form>
       </div>
 
-      <h2 className="h5">API keys</h2>
+      <h2 className="section-title">API keys</h2>
       <KeysTable base={base + "/api-keys"} />
     </>
   )

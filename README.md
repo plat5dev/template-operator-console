@@ -8,7 +8,9 @@ It is a static SPA. It signs staff in with OIDC (authorization code + PKCE), the
 
 To add a page: a file in `src/pages/`, a route in `src/App.tsx`, a link in `src/components/Layout.tsx`. Read with `useResource` / `usePaged` (`src/api/hooks.ts`), write with `api()` (`src/api/client.ts`). The path must be in the operator gateway's routes: the project's `operator.routes.yml`.
 
-Stack: Vite · React · TypeScript · Bootstrap · [oauth4webapi](https://github.com/panva/oauth4webapi).
+Stack: Vite · React · TypeScript · [oauth4webapi](https://github.com/panva/oauth4webapi), with plain CSS: design tokens (`src/styles/tokens.css`) and components (`src/styles/ui.css`), no UI framework.
+
+It wears the staff plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer app is violet (template-web) and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
 
 ## What it needs
 

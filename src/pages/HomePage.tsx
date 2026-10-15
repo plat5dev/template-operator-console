@@ -1,10 +1,13 @@
+import { useState } from "react"
 import { useAuth } from "../auth/AuthContext"
+import { ErrorAlert } from "../components/ErrorAlert"
 import { Field, Fields } from "../components/ui"
 import { config } from "../config"
 import { OrganizationsPage } from "./OrganizationsPage"
 
 export function HomePage() {
-  const { session } = useAuth()
+  const { session, login } = useAuth()
+  const [error, setError] = useState<unknown>(null)
 
   // Signed in, home is the organizations list: one click to an org, its members, and its
   // audit log. The connection details sit under it.
@@ -12,7 +15,7 @@ export function HomePage() {
     return (
       <>
         <OrganizationsPage />
-        <p className="small text-body-secondary mt-4 mb-0">
+        <p className="small muted">
           Signed in as {session.email ?? session.sub} · gateway <code>{config.gatewayUrl}</code> · issuer{" "}
           <code>{config.issuer}</code>
         </p>
@@ -22,24 +25,33 @@ export function HomePage() {
 
   return (
     <>
-      <h1 className="h3 mb-3">Staff console</h1>
-      <p className="text-body-secondary">
-        Your staff's view of every organization and person. Every page is a call to the operator gateway with your
-        staff token. The gateway logs who did what; this console keeps nothing.
-      </p>
+      <section className="hero">
+        <p className="eyebrow">staff console</p>
+        <h1>Every organization and person, for the people who run this deployment</h1>
+        <p>
+          Every page is a call to the operator gateway with your staff token. The gateway logs who did what; this
+          console keeps nothing.
+        </p>
+        <div className="cluster">
+          <button type="button" className="btn btn-primary btn-lg" onClick={() => login("/").catch(setError)}>
+            Sign in with your staff IdP
+          </button>
+        </div>
+        <ErrorAlert error={error} />
+      </section>
 
-      <div className="card mb-3">
+      <section className="card narrow">
+        <div className="card-head">
+          <h2>Connection</h2>
+        </div>
         <div className="card-body">
-          <h2 className="h6">Connection</h2>
           <Fields>
             <Field label="Gateway"><code>{config.gatewayUrl}</code></Field>
             <Field label="Issuer"><code>{config.issuer}</code></Field>
             <Field label="Client"><code>{config.clientId}</code></Field>
           </Fields>
         </div>
-      </div>
-
-      <p>Sign in with your staff IdP to start.</p>
+      </section>
     </>
   )
 }
