@@ -1,8 +1,8 @@
-# plat5 init copies this app into a project's console/ folder: the staff console,
-# a client of the operator gateway.
-name: console
-kind: console
-description: Vite + React staff console for the operator gateway (orgs, people, audit)
+# plat5 init copies this app into a project's operator-console/ folder: your staff's
+# console, a client of the operator gateway.
+name: operator-console
+kind: operator-console
+description: Vite + React console for your staff, on the operator gateway (orgs, people, projects, audit)
 
 # plat5 start runs it from this compose file. Its origin may sign in with staff Auth
 # and call the operator gateway.

@@ -1,16 +1,18 @@
-# Operator Console
+# Operator console
 
-A console for your staff, on the [operator gateway](https://github.com/plat5dev/operator): every organization and person, their members, keys, and audit logs, and a raw request page for anything else.
+A console for your staff, on the [operator gateway](https://github.com/plat5dev/operator): every organization and person, their members, keys, projects, and audit logs, and a raw request page for anything else.
 
 It is a static SPA. It signs staff in with OIDC (authorization code + PKCE), then calls gateway paths with the staff token. It has no backend, no secrets, and keeps nothing. The gateway authenticates, authorizes, and logs who did what.
 
-`plat5 init` copies it into a project's `console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `staff@example.com` / `password`. Without a `console/` (`plat5 init --no-console`), `plat5 start` runs the stock image instead.
+`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `staff@example.com` / `password`. Without an `operator-console/` (`plat5 init --no-operator-console`), no console runs; staff call the operator gateway directly.
+
+An organization's Projects tab and project pages call the project's API, not Plat5: `/organizations/{organization_id}/projects` and below, the paths every `template-*-api` starter serves. `plat5 init` routes them for staff, read-only, in `operator.routes.yml`. Without those routes the tab says so; with a starter of your own, change `src/api/projects.ts` and the pages to its shapes.
 
 To add a page: a file in `src/pages/`, a route in `src/App.tsx`, a link in `src/components/Layout.tsx`. Read with `useResource` / `usePaged` (`src/api/hooks.ts`), write with `api()` (`src/api/client.ts`). The path must be in the operator gateway's routes: the project's `operator.routes.yml`.
 
 Stack: Vite · React · TypeScript · [oauth4webapi](https://github.com/panva/oauth4webapi), with plain CSS: design tokens (`src/styles/tokens.css`) and components (`src/styles/ui.css`), no UI framework.
 
-It wears the staff plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer app is violet (template-web) and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
+It wears the staff plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer console is violet and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
 
 ## What it needs
 
@@ -37,19 +39,20 @@ Build-time. Vite inlines them, so each deployment is its own build. The build fa
 
 The redirect URI is always `<origin>/callback`.
 
-## Run the image
+## Build an image
 
-`ghcr.io/plat5dev/operator-console` serves the console on `:8080`. Its settings are the container's environment, read at start, so one image serves any deployment:
+The Dockerfile's last stage serves the console with nginx on `:8080`. Its settings are the container's environment, read at start, so one image serves any deployment:
 
 ```bash
+docker build -t operator-console .
 docker run -p 5412:8080 \
   -e GATEWAY_URL=http://localhost:5410 \
   -e AUTH_ISSUER=http://localhost:5411 \
   -e AUTH_CLIENT_ID=operator-console \
-  ghcr.io/plat5dev/operator-console:v0.1.2
+  operator-console
 ```
 
-`AUTH_SCOPES` and `AUTH_AUDIENCE` are optional, like their `VITE_` twins. `plat5 start` runs this image with the local operator plane. Images are built on `v*` tags.
+`AUTH_SCOPES` and `AUTH_AUDIENCE` are optional, like their `VITE_` twins.
 
 ## Deploy to Cloudflare Pages
 

@@ -1,4 +1,4 @@
-# Operator Console — agent contract
+# Operator console — agent contract
 
 An example client of the operator gateway. A static SPA for Cloudflare Pages. The gateway's `docs/` are law for anything it does; this repo only calls it.
 

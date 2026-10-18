@@ -1,15 +1,15 @@
-# The staff console, in development: Vite on :5412, reloading as you edit. plat5
+# The operator console, in development: Vite on :5412, reloading as you edit. plat5
 # start runs it (the project's docker-compose.yml includes this file) and passes
 # where the operator gateway and staff sign-in are. The production image is the
 # Dockerfile's last stage.
 services:
-  console:
+  operator-console:
     build:
       context: .
       target: dev
     labels:
-      service.name: console
-      service.namespace: console
+      service.name: operator-console
+      service.namespace: operator-console
     ports:
       - "5412:5412"
     environment:
@@ -18,7 +18,7 @@ services:
       VITE_AUTH_CLIENT_ID: ${PLAT5_STAFF_CLIENT_ID:-operator-console}
     volumes:
       - .:/app
-      - console_node_modules:/app/node_modules
+      - operator_console_node_modules:/app/node_modules
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:5412/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
@@ -27,4 +27,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  console_node_modules:
+  operator_console_node_modules:

@@ -6,7 +6,7 @@ import { Icon, type IconName } from "./icons"
 import { Wordmark } from "./Wordmark"
 
 // The staff plane: an amber bar that never scrolls away, and the same sidebar shell as
-// the customer app, so nobody mistakes one for the other.
+// the customer console, so nobody mistakes one for the other.
 export function Layout() {
   const { session, login, logout } = useAuth()
   // The drawer is open for the page it was opened on, so navigating closes it.

@@ -8,6 +8,7 @@ import { HomePage } from "./pages/HomePage"
 import { MemberPage } from "./pages/MemberPage"
 import { OrganizationPage } from "./pages/OrganizationPage"
 import { OrganizationsPage } from "./pages/OrganizationsPage"
+import { ProjectPage } from "./pages/ProjectPage"
 import { RequestPage } from "./pages/RequestPage"
 import { ServiceAccountPage } from "./pages/ServiceAccountPage"
 import { StaffActivityPage } from "./pages/StaffActivityPage"
@@ -27,7 +28,9 @@ export default function App() {
             <Route path="callback" element={<CallbackPage />} />
             <Route path="organizations" element={signedIn(<OrganizationsPage />)} />
             <Route path="organizations/:organizationId" element={signedIn(<OrganizationPage />)} />
-            <Route path="organizations/:organizationId/audit-events" element={signedIn(<OrganizationPage audit />)} />
+            <Route path="organizations/:organizationId/projects" element={signedIn(<OrganizationPage view="projects" />)} />
+            <Route path="organizations/:organizationId/projects/:projectId" element={signedIn(<ProjectPage />)} />
+            <Route path="organizations/:organizationId/audit-events" element={signedIn(<OrganizationPage view="audit" />)} />
             <Route
               path="organizations/:organizationId/service-accounts/:serviceAccountId"
               element={signedIn(<ServiceAccountPage />)}

@@ -26,7 +26,7 @@ export function HomePage() {
   return (
     <>
       <section className="hero">
-        <p className="eyebrow">staff console</p>
+        <p className="eyebrow">operator console</p>
         <h1>Every organization and person, for the people who run this deployment</h1>
         <p>
           Every page is a call to the operator gateway with your staff token. The gateway logs who did what; this

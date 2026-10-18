@@ -6,26 +6,31 @@ import type { Invite, Member, Organization, ServiceAccount } from "../api/identi
 import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { initials } from "../components/initials"
+import { Projects } from "../components/Projects"
 import { Empty, Id, LoadMore, Loading, PageHead, Status, Tabs, When } from "../components/ui"
 
-type Tab = "members" | "invites" | "service-accounts" | "audit"
+type Tab = "members" | "invites" | "service-accounts" | "projects" | "audit"
 
-/** An org, with its members, invites, service accounts, and audit log as tabs. The
- *  audit tab has its own URL (`…/audit-events`), so a link can open it. */
-export function OrganizationPage({ audit = false }: { audit?: boolean }) {
+/** The tabs with their own URL (`…/projects`, `…/audit-events`), so a link can open them. */
+type Routed = "projects" | "audit"
+const routedPath: Record<Routed, string> = { projects: "/projects", audit: "/audit-events" }
+
+/** An org, with its members, invites, service accounts, projects, and audit log as
+ *  tabs. Projects come from the project's API, the rest from Plat5. */
+export function OrganizationPage({ view }: { view?: Routed }) {
   const { organizationId = "" } = useParams()
   const navigate = useNavigate()
   const base = path`/organizations/${organizationId}`
   const org = useResource<Organization>(base)
-  const [listTab, setListTab] = useState<Exclude<Tab, "audit">>("members")
-  const tab: Tab = audit ? "audit" : listTab
+  const [listTab, setListTab] = useState<Exclude<Tab, Routed>>("members")
+  const tab: Tab = view ?? listTab
   function setTab(t: Tab) {
-    if (t === "audit") {
-      navigate(base + "/audit-events")
+    if (t === "projects" || t === "audit") {
+      navigate(base + routedPath[t])
       return
     }
     setListTab(t)
-    if (audit) navigate(base)
+    if (view) navigate(base)
   }
 
   if (org.loading && !org.data) return <Loading />
@@ -56,6 +61,7 @@ export function OrganizationPage({ audit = false }: { audit?: boolean }) {
             ["members", "Members"],
             ["invites", "Invites"],
             ["service-accounts", "Service accounts"],
+            ["projects", "Projects"],
             ["audit", "Audit log"],
           ]}
           current={tab}
@@ -64,6 +70,7 @@ export function OrganizationPage({ audit = false }: { audit?: boolean }) {
         {tab === "members" && <Members base={base} />}
         {tab === "invites" && <Invites base={base} />}
         {tab === "service-accounts" && <ServiceAccounts base={base} />}
+        {tab === "projects" && <Projects base={base} />}
         {tab === "audit" && <AuditLog base={base} person={false} />}
       </div>
     </>
