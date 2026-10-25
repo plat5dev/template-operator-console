@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import { useAuth } from "../auth/AuthContext"
+import { plural, rootKinds } from "../api/kinds"
 import { config } from "../config"
 import { Icon, type IconName } from "./icons"
 import { Wordmark } from "./Wordmark"
 
-// The staff plane: an amber bar that never scrolls away, and the same sidebar shell as
-// the customer console, so nobody mistakes one for the other.
+// The operator plane: an amber bar that never scrolls away, and the same sidebar shell
+// as the customer console, so nobody mistakes one for the other.
 export function Layout() {
   const { session, login, logout } = useAuth()
   // The drawer is open for the page it was opened on, so navigating closes it.
@@ -36,11 +37,11 @@ export function Layout() {
     >
       <div className="topbar" ref={bar}>
         <span>
-          <b>staff</b> · operator plane · {gateway}
+          <b>operator</b> · operator plane · {gateway}
         </span>
         <span>
           {session
-            ? `${session.email ?? session.sub} · every request is in the staff audit log`
+            ? `${session.email ?? session.sub} · every request is in the operator log`
             : "not signed in"}
         </span>
       </div>
@@ -62,12 +63,16 @@ export function Layout() {
           <>
             <nav className="nav-group" aria-label="Directory">
               <h2>directory</h2>
-              <Item to="/organizations" icon="orgs">Organizations</Item>
+              {rootKinds.map((k) => (
+                <Item key={k} to={`/nodes?kind=${encodeURIComponent(k)}`} icon="orgs">
+                  {plural(k)}
+                </Item>
+              ))}
               <Item to="/users" icon="profile">Users</Item>
             </nav>
-            <nav className="nav-group" aria-label="Staff">
-              <h2>staff</h2>
-              <Item to="/staff-activity" icon="audit">Staff activity</Item>
+            <nav className="nav-group" aria-label="Operator">
+              <h2>operator</h2>
+              <Item to="/operator-audit-events" icon="audit">Operator log</Item>
               <Item to="/request" icon="terminal">Request</Item>
             </nav>
           </>

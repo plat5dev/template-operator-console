@@ -1,4 +1,4 @@
-// Authorization code + PKCE against the staff IdP. Public client, no secret.
+// Authorization code + PKCE against the operator IdP. Public client, no secret.
 import * as oauth from "oauth4webapi"
 import { config } from "../config"
 import { writeSession, type Session } from "./session"

@@ -19,7 +19,7 @@ function statusClass(status: number): string {
 export function RequestPage() {
   const [params, setParams] = useSearchParams()
   const [method, setMethod] = useState(methods.includes(params.get("method") ?? "") ? params.get("method")! : "GET")
-  const [rawTarget, setTarget] = useState(params.get("path") ?? "/organizations")
+  const [rawTarget, setTarget] = useState(params.get("path") ?? "/nodes?kind=organization")
   const [body, setBody] = useState("")
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<RawResponse | null>(null)
@@ -36,7 +36,7 @@ export function RequestPage() {
       setTarget(target)
     }
     if (!target.startsWith("/")) {
-      setError(new Error(`Enter a path on the gateway, starting with / (like /organizations), or a URL on ${config.gatewayUrl}`))
+      setError(new Error(`Enter a path on the gateway, starting with / (like /nodes), or a URL on ${config.gatewayUrl}`))
       return
     }
     let payload: string | undefined
@@ -67,7 +67,7 @@ export function RequestPage() {
       <PageHead
         eyebrow="any route"
         title="Request"
-        lede="Any method, any path, through the operator gateway with your staff token. For routes without a page, and for seeing exactly what the gateway answers."
+        lede="Any method, any path, through the operator gateway with your operator token. For routes without a page, and for seeing exactly what the gateway answers. /as/{member_id} before a path acts as that member, where the route allows it."
       />
       <form className="stack-sm" onSubmit={(e) => void submit(e)}>
         <div className="input-group">
@@ -93,7 +93,7 @@ export function RequestPage() {
             value={rawTarget}
             onChange={(e) => setTarget(e.target.value)}
             aria-label="Path on the gateway"
-            placeholder="/organizations"
+            placeholder="/nodes"
             spellCheck={false}
           />
           <button type="submit" className="btn btn-primary" disabled={busy}>
@@ -104,7 +104,7 @@ export function RequestPage() {
           <textarea
             className="textarea mono"
             rows={6}
-            placeholder='{ "name": "..." }'
+            placeholder='{ "display_name": "..." }'
             value={body}
             onChange={(e) => setBody(e.target.value)}
             spellCheck={false}

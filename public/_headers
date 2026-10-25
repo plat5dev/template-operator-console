@@ -1,4 +1,4 @@
-# Cloudflare Pages response headers. A staff console is never framed or indexed.
+# Cloudflare Pages response headers. An operator console is never framed or indexed.
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

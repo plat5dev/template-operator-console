@@ -1,6 +1,6 @@
 /*
  * Design tokens. Paper, ink, and type come from plat5.com (web/src/styles/tokens.css).
- * The accent is the staff plane's amber, so nobody mistakes this console for the product.
+ * The accent is the operator plane's amber, so nobody mistakes this console for the product.
  *
  * Light is the default. Dark applies when the person chose it (data-theme="dark") or,
  * otherwise, when the system asks for it. The console stores no choice: it follows the system.
@@ -12,7 +12,7 @@
   --ink: #0f1013;
   --paper: #f2f2ef;
 
-  /* Accent: amber, the staff plane. The top bar, primary buttons, the active page, and the wordmark's bar. */
+  /* Accent: amber, the operator plane. The top bar, primary buttons, the active page, and the wordmark's bar. */
   --accent: #b45309;
   --accent-hover: #92400e;
   --accent-text: #9a4a06;

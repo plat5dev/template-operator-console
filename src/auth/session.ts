@@ -1,4 +1,4 @@
-// The staff token lives in sessionStorage: it survives a reload, not a closed tab. No cookies.
+// The operator token lives in sessionStorage: it survives a reload, not a closed tab. No cookies.
 export type Session = {
   accessToken: string
   expiresAt: number

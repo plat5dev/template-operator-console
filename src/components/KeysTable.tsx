@@ -1,19 +1,20 @@
 import { useState } from "react"
 import { api, path } from "../api/client"
 import { usePaged } from "../api/hooks"
-import type { ApiKey } from "../api/identity"
+import type { Key } from "../api/identity"
 import { ErrorAlert } from "./ErrorAlert"
 import { Empty, LoadMore, Loading, Status, When } from "./ui"
 
 /**
- * API keys under a user, member, or service account. Listing and revoking only:
- * this gateway does not route key creation, so operators never hold a customer secret.
+ * A person's keys or a service account's: `base` is the keys list. Listing and revoking
+ * only: the operator gateway doesn't route key creation, so operators never hold a
+ * customer secret.
  */
 export function KeysTable({ base }: { base: string }) {
-  const list = usePaged<ApiKey>(base, "keys")
+  const list = usePaged<Key>(base, "keys")
   const [error, setError] = useState<unknown>(null)
 
-  async function revoke(key: ApiKey) {
+  async function revoke(key: Key) {
     if (!window.confirm(`Revoke key "${key.name}" (${key.key_prefix}…)?`)) return
     setError(null)
     try {

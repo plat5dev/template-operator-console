@@ -6,18 +6,21 @@ import { RequireAuth } from "./components/RequireAuth"
 import { CallbackPage } from "./pages/CallbackPage"
 import { HomePage } from "./pages/HomePage"
 import { MemberPage } from "./pages/MemberPage"
-import { OrganizationPage } from "./pages/OrganizationPage"
-import { OrganizationsPage } from "./pages/OrganizationsPage"
-import { ProjectPage } from "./pages/ProjectPage"
+import { NodePage, type NodeTab } from "./pages/NodePage"
+import { NodesPage } from "./pages/NodesPage"
+import { OperatorLogPage } from "./pages/OperatorLogPage"
 import { RequestPage } from "./pages/RequestPage"
 import { ServiceAccountPage } from "./pages/ServiceAccountPage"
-import { StaffActivityPage } from "./pages/StaffActivityPage"
 import { UserPage } from "./pages/UserPage"
 import { UsersPage } from "./pages/UsersPage"
 
 const signedIn = (page: ReactNode) => <RequireAuth>{page}</RequireAuth>
 
+// A node's tabs that list one gateway path under it: /nodes/{id}/{tab}.
+const nodeTabs: NodeTab[] = ["bindings", "members", "service-accounts", "invites", "roles", "audit-events"]
+
 // Console paths mirror the gateway paths they call, so a URL here names the same target.
+// /as/{member_id} before a path acts as that member, on the routes that allow it.
 export default function App() {
   return (
     <BrowserRouter>
@@ -26,20 +29,26 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="callback" element={<CallbackPage />} />
-            <Route path="organizations" element={signedIn(<OrganizationsPage />)} />
-            <Route path="organizations/:organizationId" element={signedIn(<OrganizationPage />)} />
-            <Route path="organizations/:organizationId/projects" element={signedIn(<OrganizationPage view="projects" />)} />
-            <Route path="organizations/:organizationId/projects/:projectId" element={signedIn(<ProjectPage />)} />
-            <Route path="organizations/:organizationId/audit-events" element={signedIn(<OrganizationPage view="audit" />)} />
+            <Route path="nodes" element={signedIn(<NodesPage />)} />
+            <Route path="nodes/:nodeId" element={signedIn(<NodePage />)} />
+            <Route path="nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
+            <Route path="as/:memberId/nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
+            <Route path="projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
+            <Route path="as/:memberId/projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
+            {nodeTabs.map((tab) => (
+              <Route key={tab} path={`nodes/:nodeId/${tab}`} element={signedIn(<NodePage tab={tab} />)} />
+            ))}
+            <Route path="nodes/:nodeId/members/:memberId" element={signedIn(<MemberPage />)} />
             <Route
-              path="organizations/:organizationId/service-accounts/:serviceAccountId"
+              path="nodes/:nodeId/service-accounts/:serviceAccountId"
               element={signedIn(<ServiceAccountPage />)}
             />
-            <Route path="members/:memberId" element={signedIn(<MemberPage />)} />
             <Route path="users" element={signedIn(<UsersPage />)} />
             <Route path="users/:userId" element={signedIn(<UserPage />)} />
-            <Route path="users/:userId/audit-events" element={signedIn(<UserPage audit />)} />
-            <Route path="staff-activity" element={signedIn(<StaffActivityPage />)} />
+            <Route path="users/:userId/nodes" element={signedIn(<UserPage tab="nodes" />)} />
+            <Route path="users/:userId/keys" element={signedIn(<UserPage tab="keys" />)} />
+            <Route path="users/:userId/audit-events" element={signedIn(<UserPage tab="audit-events" />)} />
+            <Route path="operator-audit-events" element={signedIn(<OperatorLogPage />)} />
             <Route path="request" element={signedIn(<RequestPage />)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

@@ -1,4 +1,4 @@
-// Every call goes to the gateway with the staff token. The path names the target.
+// Every call goes to the gateway with the operator token. The path names the target.
 import { config } from "../config"
 import { readSession } from "../auth/session"
 
@@ -88,4 +88,10 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
 /** Builds a path with every interpolated value encoded as one segment. */
 export function path(strings: TemplateStringsArray, ...values: string[]): string {
   return strings.reduce((out, s, i) => out + s + (i < values.length ? encodeURIComponent(values[i]) : ""), "")
+}
+
+/** A path acting as a member: `/as/{member_id}` before it, on routes with `as_member`.
+ *  No member, the path as it is. */
+export function asMember(memberId: string | null | undefined, p: string): string {
+  return memberId ? path`/as/${memberId}` + p : p
 }

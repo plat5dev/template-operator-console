@@ -11,11 +11,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     <div className="center">
       <div className="card">
         <div className="card-body">
-          <h1 className="section-title" style={{ fontSize: "1.25rem" }}>Staff sign-in</h1>
-          <p className="section-lede">This page calls the operator gateway with your staff token.</p>
+          <h1 className="section-title" style={{ fontSize: "1.25rem" }}>Operator sign-in</h1>
+          <p className="section-lede">This page calls the operator gateway with your operator token.</p>
           <ErrorAlert error={error} />
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => login().catch(setError)}>
-            Sign in with your staff IdP
+            Sign in with your operator IdP
           </button>
         </div>
       </div>

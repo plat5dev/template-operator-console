@@ -102,3 +102,35 @@ export function Tabs<T extends string>({
     </div>
   )
 }
+
+/** A select of a node tree's roles, for a binding, a member or an invite. */
+export function RoleSelect({
+  roles,
+  value,
+  onChange,
+  small = false,
+}: {
+  roles: string[]
+  value: string
+  onChange: (role: string) => void
+  small?: boolean
+}) {
+  return (
+    <select
+      className={`select auto${small ? " select-sm" : ""}`}
+      aria-label="Role"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required
+    >
+      <option value="" disabled>
+        Role
+      </option>
+      {roles.map((r) => (
+        <option key={r} value={r}>
+          {r}
+        </option>
+      ))}
+    </select>
+  )
+}

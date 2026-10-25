@@ -2,28 +2,21 @@ import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api, path } from "../api/client"
 import { useResource } from "../api/hooks"
-import type { Member, MemberUser } from "../api/identity"
+import type { Member, Membership, Node, User } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
-import { KeysTable } from "../components/KeysTable"
-import { Field, Fields, Id, Loading, PageHead, Status, When } from "../components/ui"
+import { NodeCrumbs } from "../components/NodeCrumbs"
+import { Empty, Field, Fields, Id, Loading, PageHead, Status } from "../components/ui"
 
+/** A member of a tree, by its root: who it is, what it holds at the root, and removal. */
 export function MemberPage() {
-  const { memberId = "" } = useParams()
-  const base = path`/members/${memberId}`
+  const { nodeId = "", memberId = "" } = useParams()
+  const root = useResource<Node>(path`/nodes/${nodeId}`)
+  const base = path`/nodes/${nodeId}/members/${memberId}`
   const member = useResource<Member>(base)
   const [error, setError] = useState<unknown>(null)
 
-  async function setStatus(status: "active" | "suspended") {
-    setError(null)
-    try {
-      member.setData(await api<Member>("PATCH", base, { status }))
-    } catch (err) {
-      setError(err)
-    }
-  }
-
   async function remove() {
-    if (!window.confirm("Remove this member from the organization?")) return
+    if (!window.confirm("Remove this member from the tree? Its bindings are deleted. Removal is final.")) return
     setError(null)
     try {
       await api("DELETE", base)
@@ -36,19 +29,13 @@ export function MemberPage() {
   if (member.loading && !member.data) return <Loading />
   if (!member.data) return <ErrorAlert error={member.error} />
   const m = member.data
-  const org = path`/organizations/${m.organization_id}`
 
   return (
     <>
       <PageHead
-        crumbs={
-          <>
-            <Link to={org}>Organization</Link>
-            <span>Member</span>
-          </>
-        }
+        crumbs={root.data && <NodeCrumbs node={root.data} tail={<span>Member</span>} />}
         eyebrow={<Id value={m.id} />}
-        title={m.display_name ?? "Member"}
+        title={m.name ?? "Member"}
         actions={<Status value={m.status} />}
       />
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
@@ -56,54 +43,77 @@ export function MemberPage() {
       <div className="card">
         <div className="card-body">
           <Fields>
-            <Field label="Id"><Id value={m.id} /></Field>
-            <Field label="Organization"><Link to={org}>{m.organization_id}</Link></Field>
+            <Field label="Id">
+              <Id value={m.id} />
+            </Field>
             <Field label="Principal">
-              {m.principal === "user" ? (
+              {m.principal === "person" ? (
                 <>
-                  user {m.display_name ?? ""} <PersonLink base={base} />
+                  person <PersonLink memberId={m.id} />
                 </>
               ) : (
-                <>
-                  service account{" "}
-                  <Link to={org + path`/service-accounts/${m.service_account_id ?? ""}`}>
-                    {m.display_name ?? m.service_account_id}
-                  </Link>
-                </>
+                "service account"
               )}
             </Field>
-            <Field label="Status"><Status value={m.status} /></Field>
-            <Field label="Created"><When at={m.created_at} /></Field>
-            <Field label="Updated"><When at={m.updated_at} /></Field>
+            <Field label="Guest">{m.guest ? "yes: bound only below the root" : "no"}</Field>
+            <Field label="Status">
+              <Status value={m.status} />
+            </Field>
           </Fields>
         </div>
-        <div className="card-foot">
-          {m.status === "active" && (
-            <button type="button" className="btn btn-sm" onClick={() => void setStatus("suspended")}>
-              Suspend
+        {m.status === "active" && m.principal === "person" && (
+          <div className="card-foot">
+            <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
+              Remove member
             </button>
-          )}
-          {m.status === "suspended" && (
-            <button type="button" className="btn btn-sm" onClick={() => void setStatus("active")}>
-              Reactivate
-            </button>
-          )}
-          <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
-            Remove member
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
-      <h2 className="section-title">Member API keys</h2>
-      <KeysTable base={base + "/api-keys"} />
+      {m.status === "active" && <AtRoot rootId={nodeId} memberId={m.id} />}
     </>
   )
 }
 
-/** The person this member is. Gone once the person's account is deleted. */
-function PersonLink({ base }: { base: string }) {
-  const person = useResource<MemberUser>(base + "/user")
+/** The person behind a member (`GET /members/{member_id}/user`). Gone once the
+ *  person's account is deleted. */
+function PersonLink({ memberId }: { memberId: string }) {
+  const person = useResource<User>(path`/members/${memberId}/user`)
   if (person.loading) return null
   if (!person.data) return <span className="muted">(account deleted)</span>
-  return <Link to={path`/users/${person.data.user_id}`}>{person.data.user_id}</Link>
+  return <Link to={path`/users/${person.data.id}`}>{person.data.name ?? person.data.id}</Link>
+}
+
+/** What the member holds at the root (`GET /nodes/{root_id}/memberships/{member_id}`). */
+function AtRoot({ rootId, memberId }: { rootId: string; memberId: string }) {
+  const membership = useResource<Membership>(path`/nodes/${rootId}/memberships/${memberId}`)
+  if (membership.loading && !membership.data) return <Loading />
+  if (!membership.data) return <ErrorAlert error={membership.error} />
+  const { bindings, permissions } = membership.data
+
+  return (
+    <section className="stack-sm">
+      <h2 className="section-title">At the root</h2>
+      {bindings.length === 0 ? (
+        <Empty>No binding at the root. Its bindings below are on each node's Bindings tab.</Empty>
+      ) : (
+        <Fields>
+          <Field label="Roles">
+            {bindings.map((b) => (
+              <code key={b.id} className="chip">
+                {b.role}
+              </code>
+            ))}
+          </Field>
+          <Field label="Permissions">
+            {permissions.map((p) => (
+              <code key={p} className="chip">
+                {p}
+              </code>
+            ))}
+          </Field>
+        </Fields>
+      )}
+    </section>
+  )
 }

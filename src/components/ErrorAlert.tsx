@@ -6,11 +6,11 @@ function reason(body: unknown): string | null {
 }
 
 const hints: Record<number, string> = {
-  403: "Denied by the gateway's authorization policy.",
-  503: "The gateway, its IdP keys, or the service behind it is unavailable.",
+  502: "The service behind the gateway didn't answer.",
+  503: "The gateway's IdP keys, the operator log, identity, or the service behind it is unavailable.",
 }
 
-/** Shows the Plat5 error envelope. The request id joins this to the gateway's attribution log. */
+/** Shows the Plat5 error envelope. The request id joins this to the operator log and the service's log. */
 export function ErrorAlert({ error, onDismiss }: { error: unknown; onDismiss?: () => void }) {
   if (!error) return null
 

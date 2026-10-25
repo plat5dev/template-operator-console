@@ -377,7 +377,7 @@ textarea {
   align-content: start;
 }
 
-/* A bar across the top of the shell: the staff plane's, or a notice. */
+/* A bar across the top of the shell: the operator plane's, or a notice. */
 .topbar {
   grid-column: 1 / -1;
   grid-row: 1;
@@ -1366,7 +1366,8 @@ a.list-title {
 .status-removed,
 .status-revoked,
 .status-expired,
-.status-deleted {
+.status-deleted,
+.status-purged {
   color: var(--muted);
   text-decoration: line-through;
 }
@@ -1374,7 +1375,8 @@ a.list-title {
 .status-removed::before,
 .status-revoked::before,
 .status-expired::before,
-.status-deleted::before {
+.status-deleted::before,
+.status-purged::before {
   background: var(--rule-strong);
 }
 

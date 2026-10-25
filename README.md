@@ -1,25 +1,25 @@
 # Operator console
 
-A console for your staff, on the [operator gateway](https://github.com/plat5dev/operator): every organization and person, their members, keys, projects, and audit logs, and a raw request page for anything else.
+A console for your operators, on the [operator gateway](https://github.com/plat5dev/operator): every tree of nodes and every person, their bindings, members, service accounts, keys, invites, tasks and audit logs, the operator log, and a raw request page for anything else.
 
-It is a static SPA. It signs staff in with OIDC (authorization code + PKCE), then calls gateway paths with the staff token. It has no backend, no secrets, and keeps nothing. The gateway authenticates, authorizes, and logs who did what.
+It is a static SPA. It signs operators in with OIDC (authorization code + PKCE), then calls the gateway's paths, by node id, with the operator token. It has no backend, no secrets, and keeps nothing. The gateway authenticates and records who did what in the operator log.
 
-`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `staff@example.com` / `password`. Without an `operator-console/` (`plat5 init --no-operator-console`), no console runs; staff call the operator gateway directly.
+`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `operator@example.com` / `password`. Without an `operator-console/` (`plat5 init --no-operator-console`), no console runs; operators call the operator gateway directly.
 
-An organization's Projects tab and project pages call the project's API, not Plat5: `/organizations/{organization_id}/projects` and below, the paths every `template-*-api` starter serves. `plat5 init` routes them for staff, read-only, in `operator.routes.yml`. Without those routes the tab says so; with a starter of your own, change `src/api/projects.ts` and the pages to its shapes.
+The deployment's kinds are declared in `src/api/kinds.ts`, as its `plat5.yml` declares them: each kind's parent, and what its nodes are called. A node's page has a tab for each kind of child. A project's Tasks tab calls the starter API, not Plat5: `GET /projects/{project_id}/tasks`, which every `template-*-api` starter serves and routes for operators, read-only, in its `routes.operator.yml`. Without that route the tab says so; with a starter of your own, change `src/api/tasks.ts` and the tab to its shapes.
 
 To add a page: a file in `src/pages/`, a route in `src/App.tsx`, a link in `src/components/Layout.tsx`. Read with `useResource` / `usePaged` (`src/api/hooks.ts`), write with `api()` (`src/api/client.ts`). The path must be in the operator gateway's routes: the project's `operator.routes.yml`.
 
 Stack: Vite · React · TypeScript · [oauth4webapi](https://github.com/panva/oauth4webapi), with plain CSS: design tokens (`src/styles/tokens.css`) and components (`src/styles/ui.css`), no UI framework.
 
-It wears the staff plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer console is violet and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
+It wears the operator plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer console is violet and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
 
 ## What it needs
 
 | | |
 |--|--|
 | A gateway | `VITE_GATEWAY_URL`. The gateway's `ALLOWED_ORIGINS` includes this console's origin |
-| A staff IdP | `VITE_AUTH_ISSUER`. Equal to the gateway's `AUTH_ISSUER`, character for character |
+| An operator IdP | `VITE_AUTH_ISSUER`. Equal to the gateway's `AUTH_ISSUER`, character for character |
 | A public client at that IdP | `VITE_AUTH_CLIENT_ID`. No secret, PKCE, redirect URI `<console origin>/callback` |
 | An audience the gateway accepts | The access token's `aud` is in the gateway's `AUTH_AUDIENCES` |
 
@@ -100,24 +100,34 @@ bun run build
 
 - **Token**: kept in `sessionStorage`. It survives a reload, not a closed tab. No cookies, no refresh tokens. When it expires, or the gateway answers 401, sign in again.
 - **Sign out** drops the token. The IdP's own session is left alone.
-- **Paths**: console URLs mirror the gateway paths they call. `/organizations/{id}` here calls `GET /organizations/{id}` there.
-- **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the gateway's attribution log and in the service's log.
+- **Paths**: console URLs mirror the gateway paths they call. `/nodes/{id}/bindings` here calls `GET /nodes/{id}/bindings` there.
+- **Acting as a member**: a node's children and a project's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
+- **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the operator log and in the service's log.
 - **Request** page: any method and path through the gateway, with the raw response. For routes without a page. `?method=&path=` prefills it.
-- **API keys** are listed and revoked, never created. The gateway does not route key creation, so operators never hold a customer secret.
+- **Keys** are listed and revoked, never created. The gateway doesn't route key creation, so operators never hold a customer secret. Invites are listed and revoked too, never created: their tokens are secrets as well.
 
 ## Pages
 
 | Console path | Gateway calls |
 |--------------|---------------|
-| `/organizations` | `GET /organizations` |
-| `/organizations/{id}` | `GET PATCH DELETE /organizations/{id}`; members, invites, service accounts under it |
-| `/organizations/{id}/audit-events` | `GET /organizations/{id}/audit-events` |
-| `/organizations/{id}/service-accounts/{id}` | `GET PATCH DELETE`, and its API keys |
-| `/members/{id}` | `GET PATCH DELETE /members/{id}`, and its API keys |
-| `/users/{id}` | memberships, API keys, `POST /users/{id}/organizations` |
+| `/nodes?kind=organization` | `GET /nodes?kind=&status=`; `POST /roots/{kind}` |
+| `/nodes/{id}` | `GET PATCH DELETE /nodes/{id}`, `POST …/restore`, `POST …/release-slug` (a purged root), and its first tab |
+| `/nodes/{id}/children/{kind}` | `GET /nodes?parent_id=&kind=&status=`; `POST /nodes/{id}/children/{kind}` |
+| `/as/{member_id}/nodes/{id}/children/{kind}` | `GET POST /as/{member_id}/nodes/{id}/children/{kind}` |
+| `/projects/{id}/tasks`, `/as/{member_id}/projects/{id}/tasks` | The starter API's `GET /projects/{id}/tasks` |
+| `/nodes/{id}/bindings` | `GET POST /nodes/{id}/bindings`, `PATCH DELETE …/{binding_id}` |
+| `/nodes/{id}/members` | `GET POST /nodes/{root_id}/members` (a root) |
+| `/nodes/{root_id}/members/{member_id}` | `GET DELETE`, `GET /members/{member_id}/user`, `GET /nodes/{root_id}/memberships/{member_id}` |
+| `/nodes/{id}/service-accounts`, `…/{service_account_id}` | `GET PATCH DELETE`, and its keys: `GET`, `DELETE …/keys/{key_id}` |
+| `/nodes/{id}/invites` | `GET`, `DELETE …/{invite_id}` |
+| `/nodes/{id}/roles` | `GET /nodes/{id}/roles` |
+| `/nodes/{id}/audit-events` | Plat5 audit's `GET /nodes/{id}/audit-events` |
+| `/users?issuer=&subject=` | `GET /users?issuer=&subject=` |
+| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET DELETE /users/{id}`, `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
+| `/operator-audit-events` | `GET /operator-audit-events`, its filters as the query (`?node_id=`) |
 | `/request` | anything |
 
-These follow the gateway's default `routes.yml`. If your gateway routes more, add a page or use Request.
+These follow the operator gateway's shipped `routes.yml` and the starters' `routes.operator.yml`. If your gateway routes more, add a page or use Request.
 
 ## Layout
 
@@ -125,7 +135,7 @@ These follow the gateway's default `routes.yml`. If your gateway routes more, ad
 src/
   config.ts          settings
   auth/              OIDC (oidc.ts), token storage (session.ts), React context
-  api/               fetch wrapper (client.ts), list hooks, identity and audit types
-  components/        layout, error envelope, keys table
+  api/               fetch wrapper (client.ts), list hooks, the kinds, identity, audit and task types
+  components/        layout, error envelope, node crumbs and tables, keys table, audit log
   pages/             one per console path
 ```

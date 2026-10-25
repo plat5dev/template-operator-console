@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
-import { api } from "./client"
+import { api, path } from "./client"
+import type { Member } from "./identity"
 
 // Each hook keeps the result of its latest request with the key it was made for.
 // Loading is "the result is for a different key", so effects never reset state up front.
@@ -99,34 +100,39 @@ export function usePaged<T extends { id: string }>(path: string, collection: str
   }
 }
 
-/** What a member is called: its display name, or for a person with none, null. */
-type MemberName = { name: string | null; serviceAccount: boolean }
+/** What a member is called: its name, or for a person who hasn't signed in, null. */
+export type MemberName = { name: string | null; serviceAccount: boolean }
 
-// Names by member id, shared across pages. A member's name rarely changes while
-// staff look, and a reload clears it.
+/** A member to name: its id and its tree's root. */
+export type MemberRef = { rootId: string; memberId: string }
+
+// Names by member, shared across pages. A member's name rarely changes while
+// operators look, and a reload clears it.
 const memberNames = new Map<string, Promise<MemberName>>()
 
-function memberName(id: string): Promise<MemberName> {
-  let p = memberNames.get(id)
+function memberName(rootId: string, memberId: string): Promise<MemberName> {
+  const key = `${rootId}/${memberId}`
+  let p = memberNames.get(key)
   if (!p) {
-    p = api<{ display_name: string | null; principal: string }>("GET", `/members/${encodeURIComponent(id)}`)
-      .then((m) => ({ name: m.display_name, serviceAccount: m.principal === "service_account" }))
+    p = api<Member>("GET", path`/nodes/${rootId}/members/${memberId}`)
+      .then((m) => ({ name: m.name, serviceAccount: m.principal === "service_account" }))
       .catch(() => ({ name: null, serviceAccount: false }))
-    memberNames.set(id, p)
+    memberNames.set(key, p)
   }
   return p
 }
 
-/** Names for these member ids, looked up once each. Ids still loading are absent. */
-export function useMemberNames(ids: string[]): Map<string, MemberName> {
+/** Names for these members, looked up once each, by member id. Ids still loading are absent. */
+export function useMemberNames(refs: MemberRef[]): Map<string, MemberName> {
   const [names, setNames] = useState(() => new Map<string, MemberName>())
-  const key = [...new Set(ids)].sort().join(",")
+  const key = [...new Set(refs.map((r) => `${r.rootId}/${r.memberId}`))].sort().join(",")
 
   useEffect(() => {
     let live = true
-    for (const id of key ? key.split(",") : []) {
-      void memberName(id).then((n) => {
-        if (live) setNames((prev) => (prev.get(id) === n ? prev : new Map(prev).set(id, n)))
+    for (const ref of key ? key.split(",") : []) {
+      const [rootId, memberId] = ref.split("/") as [string, string]
+      void memberName(rootId, memberId).then((n) => {
+        if (live) setNames((prev) => (prev.get(memberId) === n ? prev : new Map(prev).set(memberId, n)))
       })
     }
     return () => {
