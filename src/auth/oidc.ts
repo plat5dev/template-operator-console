@@ -17,48 +17,23 @@ type Discovered = { as: oauth.AuthorizationServer; oidc: boolean }
 
 let server: Promise<Discovered> | undefined
 
+async function discoverAs(algorithm: "oidc" | "oauth2"): Promise<Discovered> {
+  const res = await oauth.discoveryRequest(issuer, { ...httpOptions, algorithm })
+  return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: algorithm === "oidc" }
+}
+
 // OIDC discovery, else OAuth 2.0 metadata (RFC 8414) for IdPs that only publish that,
-// such as Plat5 Auth. The kind that answered is remembered per issuer and tried first
-// next time, so an OAuth-only IdP's 404 on the OIDC document happens once, not on
-// every page load.
-type Kind = "oidc" | "oauth2"
-const KIND_KEY = `operator-console.discovery.${config.issuer}`
-
-function rememberedKind(): Kind | null {
-  try {
-    const v = localStorage.getItem(KIND_KEY)
-    return v === "oidc" || v === "oauth2" ? v : null
-  } catch {
-    return null
-  }
-}
-
-async function discoverAs(kind: Kind): Promise<Discovered> {
-  const res = await oauth.discoveryRequest(
-    issuer,
-    kind === "oidc" ? httpOptions : { ...httpOptions, algorithm: "oauth2" },
-  )
-  return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: kind === "oidc" }
-}
-
+// such as Plat5 Auth.
 async function discover(): Promise<Discovered> {
-  const first: Kind = rememberedKind() ?? "oidc"
-  const order: Kind[] = first === "oidc" ? ["oidc", "oauth2"] : ["oauth2", "oidc"]
-  let firstErr: unknown
-  for (const kind of order) {
+  try {
+    return await discoverAs("oidc")
+  } catch (err) {
     try {
-      const found = await discoverAs(kind)
-      try {
-        localStorage.setItem(KIND_KEY, kind)
-      } catch {
-        // storage blocked: discover in order again next time
-      }
-      return found
-    } catch (err) {
-      firstErr ??= err
+      return await discoverAs("oauth2")
+    } catch {
+      throw err
     }
   }
-  throw firstErr
 }
 
 function authorizationServer(): Promise<Discovered> {
@@ -68,6 +43,10 @@ function authorizationServer(): Promise<Discovered> {
   })
   return server
 }
+
+// Discovery is fetched when the app loads, so sign-in doesn't wait for it. A failure
+// is fetched again, and shown, when sign-in needs it.
+authorizationServer().catch(() => {})
 
 type PendingLogin = { state: string; nonce: string; verifier: string; returnTo: string }
 
