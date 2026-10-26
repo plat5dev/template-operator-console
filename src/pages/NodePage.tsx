@@ -25,7 +25,7 @@ export type NodeTab =
 /** Each tab's console path, which is the gateway path it lists. */
 function tabPath(node: Node, tab: NodeTab, kind?: string): string {
   if (tab === "children") return path`/nodes/${node.id}/children/${kind ?? ""}`
-  if (tab === "tasks") return path`/projects/${node.id}/tasks`
+  if (tab === "tasks") return path`/environments/${node.id}/tasks`
   return path`/nodes/${node.id}/` + tab
 }
 
@@ -41,8 +41,8 @@ function defaultTab(node: Node): { tab: NodeTab; kind?: string } {
  *  tasks, bindings, members (on a root), service accounts, invites, roles and audit log
  *  as tabs. Children and tasks can be listed acting as a member: `/as/{member_id}`. */
 export function NodePage({ tab: routed }: { tab?: NodeTab }) {
-  const { nodeId, projectId, kind: routedKind, memberId } = useParams()
-  const id = nodeId ?? projectId ?? ""
+  const { nodeId, environmentId, kind: routedKind, memberId } = useParams()
+  const id = nodeId ?? environmentId ?? ""
   const navigate = useNavigate()
   const base = path`/nodes/${id}`
   const node = useResource<Node>(base)
@@ -368,10 +368,10 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
 
 const taskStatusLabel: Record<TaskStatus, string> = { todo: "To do", in_progress: "In progress", done: "Done" }
 
-/** The project's tasks, from the starter API. A 404 is the operator gateway with no
+/** The environment's tasks, from the starter API. A 404 is the operator gateway with no
  *  route for them: the deployment hasn't routed the API's paths. */
 function Tasks({ node, memberId }: { node: Node; memberId?: string }) {
-  const at = path`/projects/${node.id}/tasks`
+  const at = path`/environments/${node.id}/tasks`
   const list = usePaged<Task>(asMember(memberId, at), "tasks")
   const names = useMemberNames(list.items.map((t) => ({ rootId: node.root_id, memberId: t.created_by })))
 
@@ -680,7 +680,7 @@ function Members({ node }: { node: Node }) {
   )
 }
 
-/** Service accounts born at this node. Customers create them and their keys (the
+/** Service accounts that belong to this node. Customers create them and their keys (the
  *  operator gateway doesn't route key creation); here they're renamed, deleted, and
  *  their keys revoked. */
 function ServiceAccounts({ node }: { node: Node }) {
@@ -693,7 +693,7 @@ function ServiceAccounts({ node }: { node: Node }) {
       {list.loading && list.items.length === 0 ? (
         <Loading />
       ) : list.items.length === 0 ? (
-        <Empty>No service accounts born here.</Empty>
+        <Empty>No service accounts belong here.</Empty>
       ) : (
         <div className="table-wrap">
           <table className="table">

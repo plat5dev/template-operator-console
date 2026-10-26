@@ -109,7 +109,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 - **Token**: kept in `sessionStorage`. It survives a reload, not a closed tab. No cookies, no refresh tokens. When it expires, or the gateway answers 401, sign in again.
 - **Sign out** drops the token. The IdP's own session is left alone.
 - **Paths**: console URLs mirror the gateway paths they call. `/nodes/{id}/bindings` here calls `GET /nodes/{id}/bindings` there.
-- **Acting as a member**: a node's children and a project's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
+- **Acting as a member**: a node's children and an environment's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
 - **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the operator log and in the service's log.
 - **Request** page: any method and path through the gateway, with the raw response. For routes without a page. `?method=&path=` prefills it.
 - **Keys** are listed and revoked, never created. The gateway doesn't route key creation, so operators never hold a customer secret. Invites are listed and revoked too, never created: their tokens are secrets as well.
@@ -122,7 +122,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | `/nodes/{id}` | `GET PATCH DELETE /nodes/{id}`, `POST …/restore`, `POST …/release-slug` (a purged root), and its first tab |
 | `/nodes/{id}/children/{kind}` | `GET /nodes?parent_id=&kind=&status=`; `POST /nodes/{id}/children/{kind}` |
 | `/as/{member_id}/nodes/{id}/children/{kind}` | `GET POST /as/{member_id}/nodes/{id}/children/{kind}` |
-| `/projects/{id}/tasks`, `/as/{member_id}/projects/{id}/tasks` | The starter API's `GET /projects/{id}/tasks` |
+| `/environments/{id}/tasks`, `/as/{member_id}/environments/{id}/tasks` | The starter API's `GET /environments/{id}/tasks` |
 | `/nodes/{id}/bindings` | `GET POST /nodes/{id}/bindings`, `PATCH DELETE …/{binding_id}` |
 | `/nodes/{id}/members` | `GET POST /nodes/{root_id}/members` (a root) |
 | `/nodes/{root_id}/members/{member_id}` | `GET DELETE`, `GET /members/{member_id}/user`, `GET /nodes/{root_id}/memberships/{member_id}` |

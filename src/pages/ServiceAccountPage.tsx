@@ -8,7 +8,7 @@ import { KeysTable } from "../components/KeysTable"
 import { NodeCrumbs } from "../components/NodeCrumbs"
 import { Field, Fields, Id, Loading, PageHead, When } from "../components/ui"
 
-/** A service account, by the node it was born at: rename, delete, and its keys. */
+/** A service account, by the node it belongs to: rename, delete, and its keys. */
 export function ServiceAccountPage() {
   const { nodeId = "", serviceAccountId = "" } = useParams()
   const node = useResource<Node>(path`/nodes/${nodeId}`)
@@ -66,7 +66,7 @@ export function ServiceAccountPage() {
                 <Id value={s.id} />
               )}
             </Field>
-            <Field label="Born at">
+            <Field label="Belongs to">
               <Link to={path`/nodes/${s.node_id}`}>{node.data?.display_name ?? s.node_id}</Link>
             </Field>
             <Field label="Created">

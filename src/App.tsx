@@ -33,8 +33,8 @@ export default function App() {
             <Route path="nodes/:nodeId" element={signedIn(<NodePage />)} />
             <Route path="nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
             <Route path="as/:memberId/nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
-            <Route path="projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
-            <Route path="as/:memberId/projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
+            <Route path="environments/:environmentId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
+            <Route path="as/:memberId/environments/:environmentId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
             {nodeTabs.map((tab) => (
               <Route key={tab} path={`nodes/:nodeId/${tab}`} element={signedIn(<NodePage tab={tab} />)} />
             ))}
