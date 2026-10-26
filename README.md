@@ -4,7 +4,7 @@ A console for your operators, on the [operator gateway](https://github.com/plat5
 
 It is a static SPA. It signs operators in with OIDC (authorization code + PKCE), then calls the gateway's paths, by node id, with the operator token. It has no backend, no secrets, and keeps nothing. The gateway authenticates and records who did what in the operator log.
 
-`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. Its `docker-compose.yml` runs the console alone at `http://localhost:5412`, with this folder mounted into the Vite dev server, so edits reload. It points at a gateway and an operator IdP already running: `PLAT5_OPERATOR_URL`, `PLAT5_OPERATOR_AUTH_URL` and `PLAT5_OPERATOR_CLIENT_ID`, by default `http://localhost:5410`, `http://localhost:5411` and `operator-console`.
+`plat5 init` copies it into a project's `operator-console/` folder, beside the API starter, as the CLI's [starters](https://github.com/plat5dev/cli#starters) section says; `--no-operator-console` leaves it out. It is a starting point the project owns: change anything.
 
 The deployment's kinds are declared in `src/api/kinds.ts`, as its `plat5.yml` declares them: each kind's parent, and what its nodes are called. A node's page has a tab for each kind of child. A project's Tasks tab calls the starter API, not Plat5: `GET /projects/{project_id}/tasks`, which every `template-*-api` starter serves and routes for operators, read-only, in its `routes.operator.yml`. Without that route the tab says so; with a starter of your own, change `src/api/tasks.ts` and the tab to its shapes.
 
@@ -14,6 +14,27 @@ Stack: Vite · React · TypeScript · [oauth4webapi](https://github.com/panva/oa
 
 It wears the operator plane's look: plat5.com's paper and ink with an amber accent, an amber bar across the top that names who is signed in, and an `operator` tag beside the wordmark. The customer console is violet and Plat5 itself is blue, so nobody mistakes the operator plane for the product. Light or dark follows the system; the console stores no choice.
 
+## Run
+
+`plat5 start` runs it at `http://localhost:5412` with the CLI's [operator module](https://github.com/plat5dev/cli#what-plat5-start-runs), with this folder mounted into the Vite dev server: edit a file and the page reloads. Sign in as `operator@example.com` / `password`. The module runs what the console calls: the operator gateway, on the project's `operator.routes.yml`, and the operator IdP, by default at `:5410` and `:5411`. `plat5 start` passes them to `docker-compose.yml` as `PLAT5_OPERATOR_URL`, `PLAT5_OPERATOR_AUTH_URL` and `PLAT5_OPERATOR_CLIENT_ID` (`operator-console`), and both allow the console's origin, `operator.console.web` in `plat5.dev.yml`.
+
+With the module off (`modules.operator: false` in `plat5.dev.yml`), or for a run with `plat5 start -x operator`, the folder stays and `plat5 start` doesn't run it.
+
+On your own machine instead, against a running stack (`plat5 start -x app`):
+
+```bash
+bun install
+cp .env.example .env.local   # plat5 start's gateway, IdP and client
+bun run dev --port 5412      # http://localhost:5412
+```
+
+Keep `:5412`: the operator IdP and the operator gateway allow only `operator.console.web`'s origin. Against any other gateway and IdP, put their [settings](#settings) in `.env.local`; `bun run dev` alone serves `http://localhost:5173`, and the IdP client then needs `http://localhost:5173/callback`, and the gateway `http://localhost:5173` in `ALLOWED_ORIGINS`.
+
+```bash
+bun run lint
+bun run build
+```
+
 ## What it needs
 
 | | |
@@ -22,6 +43,8 @@ It wears the operator plane's look: plat5.com's paper and ink with an amber acce
 | An operator IdP | `VITE_AUTH_ISSUER`. Equal to the gateway's `AUTH_ISSUER`, character for character |
 | A public client at that IdP | `VITE_AUTH_CLIENT_ID`. No secret, PKCE, redirect URI `<console origin>/callback` |
 | An audience the gateway accepts | The access token's `aud` is in the gateway's `AUTH_AUDIENCES` |
+
+`plat5 start`'s operator module sets all four up for the console it runs.
 
 The console sends the **access token**. The ID token, when the IdP returns one, only supplies the name shown in the header.
 
@@ -80,21 +103,6 @@ Pages serves `index.html` for unknown paths, so deep links work. `public/_header
 | Plat5 Auth | Publishes OAuth 2.0 metadata, not OIDC, and returns no ID token: the console falls back to both, and shows the email from the access token (`properties.email`, with `AUTH_TOKEN_EMAIL=true` on the issuer). Add the client id to `AUTH_ALLOWED_CLIENTS`, `<origin>/callback` to `AUTH_ALLOWED_REDIRECT_URIS`, and the origin to `AUTH_ALLOWED_ORIGINS`. Access token `aud` is the client id |
 
 Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
-
-## Run locally
-
-```bash
-bun install
-cp .env.example .env.local   # point at a running gateway and IdP
-bun run dev                  # http://localhost:5173
-```
-
-The IdP client needs `http://localhost:5173/callback`, and the gateway needs `http://localhost:5173` in `ALLOWED_ORIGINS`.
-
-```bash
-bun run lint
-bun run build
-```
 
 ## Behaviour
 

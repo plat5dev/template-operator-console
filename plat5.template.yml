@@ -1,11 +1,13 @@
-# plat5 init copies this app into a project's operator-console/ folder: your operators'
-# console, a client of the operator gateway.
+# plat5 init copies this app into a project's operator-console/ folder, beside the API
+# starter (--no-operator-console: none): your operators' console, a client of the
+# operator gateway.
 name: operator-console
 kind: operator-console
 description: Vite + React console for your operators, on the operator gateway (the tree, people, tasks, audit)
 
-# This compose file runs it alone, on :5412. Its origin may sign in with the operator
-# IdP and call the operator gateway.
+# plat5 start runs it from this compose file, on :5412, with the operator module. Its
+# origin, operator.console.web in plat5.dev.yml, may sign in with the operator IdP and
+# call the operator gateway.
 app:
   compose: docker-compose.yml
   web: http://localhost:5412

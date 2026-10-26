@@ -1,6 +1,8 @@
-# The operator console, in development: Vite on :5412, reloading as you edit. It runs
-# alone; the environment says where the operator gateway and the operator IdP are.
-# The production image is the Dockerfile's last stage.
+# The operator console, in development: Vite on :5412, reloading as you edit. plat5
+# start runs it with the operator module (the project's docker-compose.yml includes
+# this file) and passes where the operator gateway and the operator IdP are. It runs
+# the console alone: the gateway, the IdP and Postgres are the CLI's. The production
+# image is the Dockerfile's last stage.
 services:
   operator-console:
     build:
