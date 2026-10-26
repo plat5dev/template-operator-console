@@ -16,7 +16,7 @@ It wears the operator plane's look: plat5.com's paper and ink with an amber acce
 
 ## Run
 
-`plat5 start` runs it at `http://localhost:5412` with the CLI's [operator module](https://github.com/plat5dev/cli#what-plat5-start-runs), with this folder mounted into the Vite dev server: edit a file and the page reloads. Sign in as `operator@example.com` / `password`. The module runs what the console calls: the operator gateway, on the project's `operator.routes.yml`, and the operator IdP, by default at `:5410` and `:5411`. `plat5 start` passes them to `docker-compose.yml` as `PLAT5_OPERATOR_URL`, `PLAT5_OPERATOR_AUTH_URL` and `PLAT5_OPERATOR_CLIENT_ID` (`operator-console`), and both allow the console's origin, `operator.console.web` in `plat5.dev.yml`.
+`plat5 start` runs it at `http://localhost:5412` with the CLI's [operator module](https://github.com/plat5dev/cli#what-plat5-start-runs), with this folder mounted into the Vite dev server: edit a file and the page reloads. Sign in as `operator@example.com` / `password`. The module runs what the console calls: the operator gateway, on the project's `operator.routes.yml`, and the operator IdP, by default at `:5410` and `:5411`. `plat5 start` passes them to `docker-compose.yml` as `PLAT5_OPERATOR_URL`, `PLAT5_OPERATOR_AUTH_URL` and `PLAT5_OPERATOR_CLIENT_ID` (`operator-console`), and both allow the console's origin, `operator.console.web` in `plat5.dev.yml`, and any in `operator.origins`.
 
 With the module off (`modules.operator: false` in `plat5.dev.yml`), or for a run with `plat5 start -x operator`, the folder stays and `plat5 start` doesn't run it.
 
@@ -28,7 +28,7 @@ cp .env.example .env.local   # plat5 start's gateway, IdP and client
 bun run dev --port 5412      # http://localhost:5412
 ```
 
-Keep `:5412`: the operator IdP and the operator gateway allow only `operator.console.web`'s origin. Against any other gateway and IdP, put their [settings](#settings) in `.env.local`; `bun run dev` alone serves `http://localhost:5173`, and the IdP client then needs `http://localhost:5173/callback`, and the gateway `http://localhost:5173` in `ALLOWED_ORIGINS`.
+`bun run dev` alone serves `http://localhost:5173`: add that origin to `operator.origins` in `plat5.dev.yml` and run `plat5 start` again, and the operator IdP and gateway allow it too. Against any other gateway and IdP, put their [settings](#settings) in `.env.local`; the IdP client then needs `<origin>/callback`, and the gateway the origin in `ALLOWED_ORIGINS`.
 
 ```bash
 bun run lint
