@@ -20,7 +20,7 @@ An example client of the operator gateway. A static SPA for Cloudflare Pages. Th
 - Calling a service, the IdP's admin API, or anything but the gateway and the IdP's OIDC endpoints
 - Creating customer credentials (API keys, member sessions), even if a gateway routes it
 - Storing anything beyond the session token and the in-flight login
-- Dev stacks, compose files, or IdP config in this repo. Local stacks live in the CLI and toolbox
+- Dev stacks or IdP config in this repo. The one compose file runs this app alone, for the CLI to start; the gateway, IdP and Postgres live in the CLI
 - Changes to operator, plat5, or Auth for this repo's convenience
 
 ## Working here

@@ -4,7 +4,7 @@ A console for your operators, on the [operator gateway](https://github.com/plat5
 
 It is a static SPA. It signs operators in with OIDC (authorization code + PKCE), then calls the gateway's paths, by node id, with the operator token. It has no backend, no secrets, and keeps nothing. The gateway authenticates and records who did what in the operator log.
 
-`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. `plat5 start` runs it at `http://localhost:5412` with this folder mounted into the Vite dev server, so edits reload; sign in as `operator@example.com` / `password`. Without an `operator-console/` (`plat5 init --no-operator-console`), no console runs; operators call the operator gateway directly.
+`plat5 init` copies it into a project's `operator-console/` folder: a starting point the project owns. Its `docker-compose.yml` runs the console alone at `http://localhost:5412`, with this folder mounted into the Vite dev server, so edits reload. It points at a gateway and an operator IdP already running: `PLAT5_OPERATOR_URL`, `PLAT5_OPERATOR_AUTH_URL` and `PLAT5_OPERATOR_CLIENT_ID`, by default `http://localhost:5410`, `http://localhost:5411` and `operator-console`.
 
 The deployment's kinds are declared in `src/api/kinds.ts`, as its `plat5.yml` declares them: each kind's parent, and what its nodes are called. A node's page has a tab for each kind of child. A project's Tasks tab calls the starter API, not Plat5: `GET /projects/{project_id}/tasks`, which every `template-*-api` starter serves and routes for operators, read-only, in its `routes.operator.yml`. Without that route the tab says so; with a starter of your own, change `src/api/tasks.ts` and the tab to its shapes.
 
