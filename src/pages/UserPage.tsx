@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { api, path } from "../api/client"
 import { usePaged, useResource } from "../api/hooks"
@@ -10,7 +10,7 @@ import { Empty, Field, Fields, Id, LoadMore, Loading, PageHead, Status, Tabs, Wh
 
 export type UserTab = "nodes" | "keys" | "audit-events"
 
-/** A person, by user id: status and account deletion, then the nodes they can read,
+/** A person, by user id: name, status and account deletion, then the nodes they can read,
  *  their personal keys, and their own audit log as tabs, each at its gateway path. */
 export function UserPage({ tab = "nodes" }: { tab?: UserTab }) {
   const { userId = "" } = useParams()
@@ -52,10 +52,32 @@ export function UserPage({ tab = "nodes" }: { tab?: UserTab }) {
   )
 }
 
-/** The person: suspend, reactivate, and delete the account. */
+/** The person: set or clear their name, suspend, reactivate, and delete the account. */
 function Person({ base, user }: { base: string; user: ReturnType<typeof useResource<User>> }) {
   const navigate = useNavigate()
+  const [name, setName] = useState<string | null>(null)
   const [error, setError] = useState<unknown>(null)
+
+  /** `PATCH /users/{user_id} { name }`: a string sets the name, null clears it. */
+  async function saveName(value: string | null) {
+    setError(null)
+    try {
+      user.setData(await api<User>("PATCH", base, { name: value }))
+      setName(null)
+    } catch (err) {
+      setError(err)
+    }
+  }
+
+  function rename(e: FormEvent) {
+    e.preventDefault()
+    if (name !== null) void saveName(name.trim())
+  }
+
+  function clearName() {
+    if (!window.confirm("Clear this person's name? A later sign-in may set it again from the token.")) return
+    void saveName(null)
+  }
 
   async function setStatus(status: User["status"]) {
     setError(null)
@@ -91,7 +113,46 @@ function Person({ base, user }: { base: string; user: ReturnType<typeof useResou
       <div className="card-body">
         <ErrorAlert error={error} onDismiss={() => setError(null)} />
         <Fields>
-          <Field label="Name">{u.name ?? <span className="muted">none yet</span>}</Field>
+          <Field label="Name">
+            {name === null ? (
+              <>
+                {u.name ?? <span className="muted">none yet</span>}{" "}
+                <button type="button" className="btn-link small" onClick={() => setName(u.name ?? "")}>
+                  {u.name === null ? "Set" : "Edit"}
+                </button>
+                {u.name !== null && (
+                  <>
+                    {" "}
+                    <button type="button" className="btn-link small" onClick={clearName}>
+                      Clear
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <form className="cluster" style={{ maxWidth: "28rem" }} onSubmit={rename}>
+                <input
+                  className="input input-sm grow"
+                  aria-label="Name"
+                  value={name}
+                  maxLength={128}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={!name.trim() || name.trim() === u.name}
+                >
+                  Save
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setName(null)}>
+                  Cancel
+                </button>
+              </form>
+            )}
+          </Field>
           <Field label="Status">
             <Status value={u.status} />
           </Field>

@@ -131,7 +131,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | `/nodes/{id}/roles` | `GET /nodes/{id}/roles` |
 | `/nodes/{id}/audit-events` | Plat5 audit's `GET /nodes/{id}/audit-events` |
 | `/users?issuer=&subject=` | `GET /users?issuer=&subject=` |
-| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET DELETE /users/{id}`, `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
+| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET PATCH DELETE /users/{id}` (`PATCH { name }` sets the person's name, `{ "name": null }` clears it), `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
 | `/operator-audit-events` | `GET /operator-audit-events`, its filters as the query (`?node_id=`) |
 | `/request` | anything |
 
