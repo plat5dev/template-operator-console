@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ApiError, api, asMember, path } from "../api/client"
+import { ApiError, api, asMember, hasCode, path } from "../api/client"
 import { useMemberNames, usePaged, useResource } from "../api/hooks"
 import type { Binding, Invite, Member, Node, NodeStatus, RolesList, ServiceAccount } from "../api/identity"
 import { childKinds, plural } from "../api/kinds"
@@ -85,11 +85,11 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
         actions={<Status value={n.status} />}
       />
 
-      <NodeCard node={n} onChanged={node.setData} reload={node.reload} />
+      <NodeCard key={n.id} node={n} onChanged={node.setData} reload={node.reload} />
 
       <div className="stack">
         <Tabs tabs={tabs} current={current} onChange={open} />
-        {tab === "children" && kind && <Children node={n} kind={kind} memberId={memberId} />}
+        {tab === "children" && kind && <Children key={`${n.id}/${kind}`} node={n} kind={kind} memberId={memberId} />}
         {tab === "tasks" && <Tasks node={n} memberId={memberId} />}
         {tab === "bindings" && <Bindings node={n} />}
         {tab === "members" && <Members node={n} />}
@@ -111,11 +111,14 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
 }
 
 /** The node's fields, rename, and its lifecycle: delete, restore, and on a purged root,
- *  releasing its slug. */
+ *  releasing its slug. A restore past the grace (409 `GRACE_EXPIRED`) loses its Restore
+ *  button; one refused because the parent is deleted (409 `PARENT_DELETED`) keeps it, for
+ *  once the parent is restored. */
 function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node) => void; reload: () => void }) {
   const base = path`/nodes/${node.id}`
   const [name, setName] = useState<string | null>(null)
   const [error, setError] = useState<unknown>(null)
+  const [graceExpired, setGraceExpired] = useState(false)
 
   async function run(work: () => Promise<void>) {
     setError(null)
@@ -145,7 +148,15 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
     })
   }
 
-  const restore = () => void run(async () => onChanged(await api<Node>("POST", base + "/restore")))
+  const restore = () =>
+    void run(async () => {
+      try {
+        onChanged(await api<Node>("POST", base + "/restore"))
+      } catch (err) {
+        if (hasCode(err, "GRACE_EXPIRED")) setGraceExpired(true)
+        throw err
+      }
+    })
 
   const releaseSlug = () => {
     if (!window.confirm(`Release the slug "${node.slug}"? A new root can take it.`)) return
@@ -200,6 +211,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
           {node.purge_after && (
             <Field label="Purge after">
               <When at={node.purge_after} />
+              {graceExpired && <span className="small text-2"> · can no longer be restored</span>}
             </Field>
           )}
           <Field label="Created">
@@ -211,7 +223,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
         </Fields>
       </div>
       <div className="card-foot">
-        {node.status === "deleted" && (
+        {node.status === "deleted" && !graceExpired && (
           <button type="button" className="btn btn-sm" onClick={restore}>
             Restore
           </button>
@@ -287,7 +299,9 @@ const childStatuses: [NodeStatus, string][] = [
 
 /** The node's children of one kind. Plainly, every child (`GET /nodes?parent_id=`).
  *  Acting as a member, identity's children list, filtered to what that member can
- *  read, and a create gives that member the creator role. */
+ *  read, and a create gives that member the creator role. A deleted or purged node takes
+ *  no children (409 `PARENT_DELETED`), so it has no create form, nor once a create
+ *  answers that. */
 function Children({ node, kind, memberId }: { node: Node; kind: string; memberId?: string }) {
   const navigate = useNavigate()
   const [status, setStatus] = useState<NodeStatus>("active")
@@ -299,6 +313,8 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
   const [displayName, setDisplayName] = useState("")
   const [slug, setSlug] = useState("")
   const [error, setError] = useState<unknown>(null)
+  /** A create answered 409 `PARENT_DELETED`: this node was deleted since it loaded. */
+  const [parentDeleted, setParentDeleted] = useState(false)
   const statuses = memberId ? childStatuses.filter(([s]) => s !== "purged") : childStatuses
 
   async function create(e: FormEvent) {
@@ -309,6 +325,7 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
       const created = await api<Node>("POST", asMember(memberId, children), body)
       navigate(path`/nodes/${created.id}`)
     } catch (err) {
+      if (hasCode(err, "PARENT_DELETED")) setParentDeleted(true)
       setError(err)
     }
   }
@@ -337,31 +354,38 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
       </div>
       <ErrorAlert error={list.error} />
       <NodeTable list={list} empty={`No ${plural(kind).toLowerCase()}.`} />
-      <form className="stack-sm" onSubmit={(e) => void create(e)}>
-        <ErrorAlert error={error} onDismiss={() => setError(null)} />
-        <div className="form-row" style={{ maxWidth: "44rem" }}>
-          <input
-            className="input grow"
-            aria-label="Display name"
-            placeholder={`New ${kind}'s display name`}
-            value={displayName}
-            maxLength={128}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-          />
-          <input
-            className="input mono"
-            aria-label="Slug"
-            placeholder="slug (optional)"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-          />
-          <button type="submit" className="btn">
-            Create {kind}
-            {memberId ? " as this member" : ""}
-          </button>
-        </div>
-      </form>
+      <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      {node.status !== "active" || parentDeleted ? (
+        <p className="small text-2">
+          Nothing is created under a {node.status === "purged" ? "purged" : "deleted"} {node.kind}
+          {node.status === "purged" ? "." : ": restore it first."}
+        </p>
+      ) : (
+        <form className="stack-sm" onSubmit={(e) => void create(e)}>
+          <div className="form-row" style={{ maxWidth: "44rem" }}>
+            <input
+              className="input grow"
+              aria-label="Display name"
+              placeholder={`New ${kind}'s display name`}
+              value={displayName}
+              maxLength={128}
+              onChange={(e) => setDisplayName(e.target.value)}
+              required
+            />
+            <input
+              className="input mono"
+              aria-label="Slug"
+              placeholder="slug (optional)"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+            />
+            <button type="submit" className="btn">
+              Create {kind}
+              {memberId ? " as this member" : ""}
+            </button>
+          </div>
+        </form>
+      )}
     </>
   )
 }
@@ -780,7 +804,7 @@ function Invites({ node }: { node: Node }) {
                     <Status value={inv.status} />
                   </td>
                   <td className="small">
-                    {inv.use_count} / {inv.max_uses}
+                    {inv.use_count} / {inv.max_uses ?? "∞"}
                   </td>
                   <td className="small">
                     <When at={inv.expires_at} />

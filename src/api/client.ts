@@ -28,6 +28,11 @@ export class ApiError extends Error {
   }
 }
 
+/** Whether `err` is the API's error with this `code` (`errors.md` in Plat5's reference). */
+export function hasCode(err: unknown, code: string): err is ApiError {
+  return err instanceof ApiError && err.code === code
+}
+
 export type RawResponse = {
   status: number
   requestId: string | null

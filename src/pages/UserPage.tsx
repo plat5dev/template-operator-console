@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { api, path } from "../api/client"
+import { api, hasCode, path } from "../api/client"
 import { usePaged, useResource } from "../api/hooks"
 import type { Node, User } from "../api/identity"
 import { AuditLog } from "../components/AuditLog"
@@ -57,6 +57,10 @@ function Person({ base, user }: { base: string; user: ReturnType<typeof useResou
   const navigate = useNavigate()
   const [name, setName] = useState<string | null>(null)
   const [error, setError] = useState<unknown>(null)
+  /** Set once the name edit answers 409 `NAME_OWNED_BY_IDP`: the deployment's IdP owns
+   *  names (`users.name.sync: each_sign_in`). The console can't read the config, so it
+   *  learns it here, and keeps it for this page only. */
+  const [nameFromIdp, setNameFromIdp] = useState(false)
 
   /** `PATCH /users/{user_id} { name }`: a string sets the name, null clears it. */
   async function saveName(value: string | null) {
@@ -65,6 +69,10 @@ function Person({ base, user }: { base: string; user: ReturnType<typeof useResou
       user.setData(await api<User>("PATCH", base, { name: value }))
       setName(null)
     } catch (err) {
+      if (hasCode(err, "NAME_OWNED_BY_IDP")) {
+        setNameFromIdp(true)
+        setName(null)
+      }
       setError(err)
     }
   }
@@ -117,10 +125,17 @@ function Person({ base, user }: { base: string; user: ReturnType<typeof useResou
             {name === null ? (
               <>
                 {u.name ?? <span className="muted">none yet</span>}{" "}
-                <button type="button" className="btn-link small" onClick={() => setName(u.name ?? "")}>
-                  {u.name === null ? "Set" : "Edit"}
-                </button>
-                {u.name !== null && (
+                {nameFromIdp ? (
+                  <span className="small text-2">
+                    It comes from the sign-in provider at each sign-in (<code>users.name.sync: each_sign_in</code>), so
+                    it's changed there.
+                  </span>
+                ) : (
+                  <button type="button" className="btn-link small" onClick={() => setName(u.name ?? "")}>
+                    {u.name === null ? "Set" : "Edit"}
+                  </button>
+                )}
+                {u.name !== null && !nameFromIdp && (
                   <>
                     {" "}
                     <button type="button" className="btn-link small" onClick={clearName}>

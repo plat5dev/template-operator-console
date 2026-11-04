@@ -111,8 +111,9 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 - **Paths**: console URLs mirror the gateway paths they call. `/nodes/{id}/bindings` here calls `GET /nodes/{id}/bindings` there.
 - **Acting as a member**: a node's children and an environment's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
 - **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the operator log and in the service's log.
+- **Refusals with their own code** are branched on by code, never by status (Plat5 `docs/reference/errors.md`). A name edit answered `409` `NAME_OWNED_BY_IDP` (the deployment's `users.name.sync: each_sign_in`) loses Edit, Set and Clear, and the page says the name comes from the sign-in provider. A restore answered `409` `GRACE_EXPIRED` loses Restore. A create answered `409` `PARENT_DELETED` loses its form, which a deleted or purged node never shows.
 - **Request** page: any method and path through the gateway, with the raw response. For routes without a page. `?method=&path=` prefills it.
-- **Keys** are listed and revoked, never created. The gateway doesn't route key creation, so operators never hold a customer secret. Invites are listed and revoked too, never created: their tokens are secrets as well.
+- **Keys** are listed and revoked, never created. The gateway doesn't route key creation, so operators never hold a customer secret. Invites are listed and revoked too, never created: their tokens are secrets as well. Their uses show `∞` where `max_uses` is `null`, unlimited.
 
 ## Pages
 
@@ -131,7 +132,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | `/nodes/{id}/roles` | `GET /nodes/{id}/roles` |
 | `/nodes/{id}/audit-events` | Plat5 audit's `GET /nodes/{id}/audit-events` |
 | `/users?issuer=&subject=` | `GET /users?issuer=&subject=` |
-| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET PATCH DELETE /users/{id}` (`PATCH { name }` sets the person's name, `{ "name": null }` clears it), `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
+| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET PATCH DELETE /users/{id}` (`PATCH { name }` sets the person's name, `{ "name": null }` clears it; `409` `NAME_OWNED_BY_IDP` under `each_sign_in`), `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
 | `/operator-audit-events` | `GET /operator-audit-events`, its filters as the query (`?node_id=`) |
 | `/request` | anything |
 

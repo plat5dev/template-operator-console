@@ -106,7 +106,8 @@ export type Invite = {
   node_id: string
   role: string
   grants: Grant[]
-  max_uses: number | "unlimited"
+  /** null: unlimited. */
+  max_uses: number | null
   use_count: number
   status: InviteStatus
   expires_at: string
