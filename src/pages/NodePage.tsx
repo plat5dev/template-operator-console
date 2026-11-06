@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { ApiError, api, asMember, hasCode, path } from "../api/client"
 import { useMemberNames, usePaged, useResource } from "../api/hooks"
-import type { Binding, Invite, Member, Node, NodeStatus, RolesList, ServiceAccount } from "../api/identity"
+import { writable, type Binding, type Invite, type Member, type Node, type NodeStatus, type RolesList, type ServiceAccount } from "../api/identity"
 import { childKinds, plural } from "../api/kinds"
 import { tasksKind, type Task, type TaskStatus } from "../api/tasks"
 import { AuditLog } from "../components/AuditLog"
@@ -89,12 +89,14 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
 
       <div className="stack">
         <Tabs tabs={tabs} current={current} onChange={open} />
-        {tab === "children" && kind && <Children key={`${n.id}/${kind}`} node={n} kind={kind} memberId={memberId} />}
+        {tab === "children" && kind && (
+          <Children key={`${n.id}/${kind}`} node={n} kind={kind} memberId={memberId} onPurged={node.reload} />
+        )}
         {tab === "tasks" && <Tasks node={n} memberId={memberId} />}
-        {tab === "bindings" && <Bindings node={n} />}
-        {tab === "members" && <Members node={n} />}
+        {tab === "bindings" && <Bindings node={n} onPurged={node.reload} />}
+        {tab === "members" && <Members node={n} onPurged={node.reload} />}
         {tab === "service-accounts" && <ServiceAccounts node={n} />}
-        {tab === "invites" && <Invites node={n} />}
+        {tab === "invites" && <Invites node={n} onPurged={node.reload} />}
         {tab === "roles" && <Roles node={n} />}
         {tab === "audit-events" && (
           <>
@@ -110,11 +112,12 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
   )
 }
 
-/** The node's fields, rename (not on a purged node), and its lifecycle: delete, restore, and on a purged root
+/** The node's fields, rename (while it's `writable`), and its lifecycle: delete, restore, and on a purged root
  *  whose slug isn't `null` yet, releasing it; the node it answers has `slug: null`, so
  *  the button goes. A restore past the grace (409 `GRACE_EXPIRED`) loses its Restore
  *  button; one refused because the parent is deleted (409 `PARENT_DELETED`) keeps it, for
- *  once the parent is restored. */
+ *  once the parent is restored. A rename refused because the node was purged since it
+ *  loaded (409 `NODE_PURGED`) reloads it, which takes Rename away. */
 function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node) => void; reload: () => void }) {
   const base = path`/nodes/${node.id}`
   const [name, setName] = useState<string | null>(null)
@@ -126,6 +129,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
     try {
       await work()
     } catch (err) {
+      if (hasCode(err, "NODE_PURGED")) reload()
       setError(err)
     }
   }
@@ -167,7 +171,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
   const canRestore = node.status === "deleted" && !graceExpired
   const canRelease = node.status === "purged" && node.parent_id === null && node.slug !== null
   const canDelete = node.status === "active"
-  const canRename = node.status !== "purged"
+  const canRename = writable(node)
 
   return (
     <div className="card">
@@ -312,10 +316,21 @@ const childStatuses: [NodeStatus, string][] = [
 
 /** The node's children of one kind. Plainly, every child (`GET /nodes?parent_id=`).
  *  Acting as a member, identity's children list, filtered to what that member can
- *  read, and a create gives that member the creator role. A deleted or purged node takes
- *  no children (409 `PARENT_DELETED`), so it has no create form, nor once a create
- *  answers that. */
-function Children({ node, kind, memberId }: { node: Node; kind: string; memberId?: string }) {
+ *  read, and a create gives that member the creator role. A deleted node takes no
+ *  children (409 `PARENT_DELETED`) and a purged one is read-only (`writable`), so neither
+ *  has a create form, nor once a create answers `PARENT_DELETED`; one answered
+ *  `NODE_PURGED` reloads the node. */
+function Children({
+  node,
+  kind,
+  memberId,
+  onPurged,
+}: {
+  node: Node
+  kind: string
+  memberId?: string
+  onPurged: () => void
+}) {
   const navigate = useNavigate()
   const [status, setStatus] = useState<NodeStatus>("active")
   const children = path`/nodes/${node.id}/children/${kind}`
@@ -339,6 +354,7 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
       navigate(path`/nodes/${created.id}`)
     } catch (err) {
       if (hasCode(err, "PARENT_DELETED")) setParentDeleted(true)
+      if (hasCode(err, "NODE_PURGED")) onPurged()
       setError(err)
     }
   }
@@ -368,11 +384,10 @@ function Children({ node, kind, memberId }: { node: Node; kind: string; memberId
       <ErrorAlert error={list.error} />
       <NodeTable list={list} empty={`No ${plural(kind).toLowerCase()}.`} />
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
-      {node.status !== "active" || parentDeleted ? (
-        <p className="small text-2">
-          Nothing is created under a {node.status === "purged" ? "purged" : "deleted"} {node.kind}
-          {node.status === "purged" ? "." : ": restore it first."}
-        </p>
+      {!writable(node) ? (
+        <p className="small text-2">Nothing is created under a purged {node.kind}.</p>
+      ) : node.status === "deleted" || parentDeleted ? (
+        <p className="small text-2">Nothing is created under a deleted {node.kind}: restore it first.</p>
       ) : (
         <form className="stack-sm" onSubmit={(e) => void create(e)}>
           <div className="form-row" style={{ maxWidth: "44rem" }}>
@@ -472,14 +487,16 @@ function useRoles(node: Node): string[] {
   return roles.data?.roles.map((r) => r.slug) ?? []
 }
 
-/** Run one write, keeping its error for an alert. */
-function useWrite() {
+/** Run one write, keeping its error for an alert. One refused because the node was
+ *  purged since it loaded (409 `NODE_PURGED`) calls `onPurged`, to reload it. */
+function useWrite(onPurged: () => void) {
   const [error, setError] = useState<unknown>(null)
   async function run(work: () => Promise<void>) {
     setError(null)
     try {
       await work()
     } catch (err) {
+      if (hasCode(err, "NODE_PURGED")) onPurged()
       setError(err)
     }
   }
@@ -487,13 +504,14 @@ function useWrite() {
 }
 
 /** Every binding that counts here: this node's own, and its ancestors' (inherited),
- *  which are changed on their own node. */
-function Bindings({ node }: { node: Node }) {
+ *  which are changed on their own node. Read-only on a purged node. */
+function Bindings({ node, onPurged }: { node: Node; onPurged: () => void }) {
   const base = path`/nodes/${node.id}/bindings`
   const list = usePaged<Binding>(base, "bindings")
   const roles = useRoles(node)
   const members = useResource<{ members: Member[] }>(path`/nodes/${node.root_id}/members` + "?limit=100")
-  const write = useWrite()
+  const write = useWrite(onPurged)
+  const canWrite = writable(node)
   const [memberId, setMemberId] = useState("")
   const [role, setRole] = useState("")
   const where = new Map(node.ancestors.map((a) => [a.id, a.display_name]))
@@ -549,7 +567,7 @@ function Bindings({ node }: { node: Node }) {
                     </MemberCell>
                   </td>
                   <td className="small">
-                    {b.inherited ? (
+                    {b.inherited || !canWrite ? (
                       b.role
                     ) : (
                       <RoleSelect small roles={roles.length ? roles : [b.role]} value={b.role} onChange={(r) => change(b, r)} />
@@ -566,7 +584,7 @@ function Bindings({ node }: { node: Node }) {
                     <When at={b.created_at} />
                   </td>
                   <td className="actions">
-                    {!b.inherited && (
+                    {!b.inherited && canWrite && (
                       <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(b)}>
                         Remove
                       </button>
@@ -579,29 +597,31 @@ function Bindings({ node }: { node: Node }) {
         </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
-      <form className="form-row" style={{ maxWidth: "44rem" }} onSubmit={add}>
-        <select
-          className="select grow"
-          aria-label="Member"
-          value={memberId}
-          onChange={(e) => setMemberId(e.target.value)}
-          required
-        >
-          <option value="" disabled>
-            Member of the tree
-          </option>
-          {(members.data?.members ?? []).map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name ?? m.id}
-              {m.principal === "service_account" ? " (service account)" : ""}
+      {canWrite && (
+        <form className="form-row" style={{ maxWidth: "44rem" }} onSubmit={add}>
+          <select
+            className="select grow"
+            aria-label="Member"
+            value={memberId}
+            onChange={(e) => setMemberId(e.target.value)}
+            required
+          >
+            <option value="" disabled>
+              Member of the tree
             </option>
-          ))}
-        </select>
-        <RoleSelect roles={roles} value={role} onChange={setRole} />
-        <button type="submit" className="btn">
-          Add binding
-        </button>
-      </form>
+            {(members.data?.members ?? []).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name ?? m.id}
+                {m.principal === "service_account" ? " (service account)" : ""}
+              </option>
+            ))}
+          </select>
+          <RoleSelect roles={roles} value={role} onChange={setRole} />
+          <button type="submit" className="btn">
+            Add binding
+          </button>
+        </form>
+      )}
     </>
   )
 }
@@ -636,12 +656,12 @@ function MemberCell({
 }
 
 /** A root's active members. Adding one resolves the person by IdP link, creating them
- *  if the subject is new, and binds a role at the root. */
-function Members({ node }: { node: Node }) {
+ *  if the subject is new, and binds a role at the root. Not on a purged root. */
+function Members({ node, onPurged }: { node: Node; onPurged: () => void }) {
   const base = path`/nodes/${node.id}/members`
   const list = usePaged<Member>(base, "members")
   const roles = useRoles(node)
-  const write = useWrite()
+  const write = useWrite(onPurged)
   const [issuer, setIssuer] = useState("")
   const [subject, setSubject] = useState("")
   const [role, setRole] = useState("")
@@ -691,35 +711,37 @@ function Members({ node }: { node: Node }) {
         </div>
       )}
       <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
-      <form className="form-row" style={{ maxWidth: "52rem" }} onSubmit={add}>
-        <input
-          className="input grow"
-          aria-label="IdP issuer"
-          placeholder="IdP issuer"
-          value={issuer}
-          onChange={(e) => setIssuer(e.target.value)}
-          required
-        />
-        <input
-          className="input grow"
-          aria-label="IdP subject"
-          placeholder="IdP subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          required
-        />
-        <RoleSelect roles={roles} value={role} onChange={setRole} />
-        <button type="submit" className="btn">
-          Add member
-        </button>
-      </form>
+      {writable(node) && (
+        <form className="form-row" style={{ maxWidth: "52rem" }} onSubmit={add}>
+          <input
+            className="input grow"
+            aria-label="IdP issuer"
+            placeholder="IdP issuer"
+            value={issuer}
+            onChange={(e) => setIssuer(e.target.value)}
+            required
+          />
+          <input
+            className="input grow"
+            aria-label="IdP subject"
+            placeholder="IdP subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            required
+          />
+          <RoleSelect roles={roles} value={role} onChange={setRole} />
+          <button type="submit" className="btn">
+            Add member
+          </button>
+        </form>
+      )}
     </>
   )
 }
 
 /** Service accounts that belong to this node. Customers create them and their keys (the
  *  operator gateway doesn't route key creation); here they're renamed, deleted, and
- *  their keys revoked. */
+ *  their keys revoked, while the node is `writable`. */
 function ServiceAccounts({ node }: { node: Node }) {
   const base = path`/nodes/${node.id}/service-accounts`
   const list = usePaged<ServiceAccount>(base, "service_accounts")
@@ -765,11 +787,13 @@ function ServiceAccounts({ node }: { node: Node }) {
 }
 
 /** Invites to this node. Listing and revoking only: an invite's token is a secret
- *  shown once, like a key, and operators don't hold customer secrets. */
-function Invites({ node }: { node: Node }) {
+ *  shown once, like a key, and operators don't hold customer secrets. No revoking on a
+ *  purged node. */
+function Invites({ node, onPurged }: { node: Node; onPurged: () => void }) {
   const base = path`/nodes/${node.id}/invites`
   const list = usePaged<Invite>(base, "invites")
-  const write = useWrite()
+  const write = useWrite(onPurged)
+  const canWrite = writable(node)
 
   const revoke = (inv: Invite) => {
     if (!window.confirm(`Revoke invite ${inv.token_prefix}…?`)) return
@@ -823,7 +847,7 @@ function Invites({ node }: { node: Node }) {
                     <When at={inv.expires_at} />
                   </td>
                   <td className="actions">
-                    {inv.status === "active" && (
+                    {inv.status === "active" && canWrite && (
                       <button type="button" className="btn btn-danger btn-sm" onClick={() => revoke(inv)}>
                         Revoke
                       </button>

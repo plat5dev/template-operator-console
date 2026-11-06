@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { api, path } from "../api/client"
+import { api, hasCode, path } from "../api/client"
 import { usePaged } from "../api/hooks"
 import type { Key } from "../api/identity"
 import { ErrorAlert } from "./ErrorAlert"
@@ -8,9 +8,18 @@ import { Empty, LoadMore, Loading, Status, When } from "./ui"
 /**
  * A person's keys or a service account's: `base` is the keys list. Listing and revoking
  * only: the operator gateway doesn't route key creation, so operators never hold a
- * customer secret.
+ * customer secret. `canRevoke` is false for a service account of a purged node; a revoke
+ * answered 409 `NODE_PURGED` calls `onPurged`, to reload that node.
  */
-export function KeysTable({ base }: { base: string }) {
+export function KeysTable({
+  base,
+  canRevoke = true,
+  onPurged,
+}: {
+  base: string
+  canRevoke?: boolean
+  onPurged?: () => void
+}) {
   const list = usePaged<Key>(base, "keys")
   const [error, setError] = useState<unknown>(null)
 
@@ -21,6 +30,7 @@ export function KeysTable({ base }: { base: string }) {
       await api("DELETE", base + path`/${key.id}`)
       list.reload()
     } catch (e) {
+      if (hasCode(e, "NODE_PURGED")) onPurged?.()
       setError(e)
     }
   }
@@ -58,7 +68,7 @@ export function KeysTable({ base }: { base: string }) {
                   {k.revoked_at ? <When at={k.revoked_at} /> : <Status value="active" />}
                 </td>
                 <td className="actions">
-                  {!k.revoked_at && (
+                  {!k.revoked_at && canRevoke && (
                     <button type="button" className="btn btn-danger btn-sm" onClick={() => void revoke(k)}>
                       Revoke
                     </button>

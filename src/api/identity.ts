@@ -31,6 +31,15 @@ export type Node = {
   ancestors: Ancestor[]
 }
 
+/** Whether the console offers writes to this node and what hangs off it: its name,
+ *  children, bindings, members, service accounts and their keys, and invites. A purged
+ *  node is read-only, and identity answers 409 `NODE_PURGED` (Plat5
+ *  `docs/concepts/lifecycle.md`); its deletes, which would change nothing, aren't offered
+ *  either. Releasing a purged root's slug is the one write it takes. */
+export function writable(node: Node): boolean {
+  return node.status !== "purged"
+}
+
 /** A role for a member on one node. `inherited` when it sits on an ancestor of the node listed. */
 export type Binding = {
   id: string

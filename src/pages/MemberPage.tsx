@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { api, path } from "../api/client"
+import { api, hasCode, path } from "../api/client"
 import { useResource } from "../api/hooks"
-import type { Member, Membership, Node, User } from "../api/identity"
+import { writable, type Member, type Membership, type Node, type User } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { NodeCrumbs } from "../components/NodeCrumbs"
 import { Empty, Field, Fields, Id, Loading, PageHead, Status } from "../components/ui"
 
-/** A member of a tree, by its root: who it is, what it holds at the root, and removal. */
+/** A member of a tree, by its root: who it is, what it holds at the root, and removal,
+ *  while the root is `writable`. A removal answered 409 `NODE_PURGED` reloads the root. */
 export function MemberPage() {
   const { nodeId = "", memberId = "" } = useParams()
   const root = useResource<Node>(path`/nodes/${nodeId}`)
@@ -22,6 +23,7 @@ export function MemberPage() {
       await api("DELETE", base)
       member.reload()
     } catch (err) {
+      if (hasCode(err, "NODE_PURGED")) root.reload()
       setError(err)
     }
   }
@@ -61,7 +63,7 @@ export function MemberPage() {
             </Field>
           </Fields>
         </div>
-        {m.status === "active" && m.principal === "person" && (
+        {m.status === "active" && m.principal === "person" && root.data && writable(root.data) && (
           <div className="card-foot">
             <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
               Remove member

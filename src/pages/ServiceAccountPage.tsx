@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { api, path } from "../api/client"
+import { api, hasCode, path } from "../api/client"
 import { useResource } from "../api/hooks"
-import type { Node, ServiceAccount } from "../api/identity"
+import { writable, type Node, type ServiceAccount } from "../api/identity"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { KeysTable } from "../components/KeysTable"
 import { NodeCrumbs } from "../components/NodeCrumbs"
 import { Field, Fields, Id, Loading, PageHead, When } from "../components/ui"
 
-/** A service account, by the node it belongs to: rename, delete, and its keys. */
+/** A service account, by the node it belongs to: rename, delete, and its keys, while the
+ *  node is `writable`. A write answered 409 `NODE_PURGED` reloads the node. */
 export function ServiceAccountPage() {
   const { nodeId = "", serviceAccountId = "" } = useParams()
   const node = useResource<Node>(path`/nodes/${nodeId}`)
@@ -17,6 +18,12 @@ export function ServiceAccountPage() {
   const navigate = useNavigate()
   const [name, setName] = useState<string | null>(null)
   const [error, setError] = useState<unknown>(null)
+  const canWrite = node.data !== null && writable(node.data)
+
+  function failed(err: unknown) {
+    if (hasCode(err, "NODE_PURGED")) node.reload()
+    setError(err)
+  }
 
   async function rename(e: FormEvent) {
     e.preventDefault()
@@ -26,7 +33,7 @@ export function ServiceAccountPage() {
       sa.setData(await api<ServiceAccount>("PATCH", base, { name }))
       setName(null)
     } catch (err) {
-      setError(err)
+      failed(err)
     }
   }
 
@@ -37,7 +44,7 @@ export function ServiceAccountPage() {
       await api("DELETE", base)
       navigate(path`/nodes/${nodeId}/service-accounts`, { replace: true })
     } catch (err) {
-      setError(err)
+      failed(err)
     }
   }
 
@@ -77,27 +84,29 @@ export function ServiceAccountPage() {
             </Field>
           </Fields>
         </div>
-        <form className="card-foot" onSubmit={(e) => void rename(e)}>
-          <input
-            className="input input-sm auto"
-            aria-label="Name"
-            style={{ maxWidth: "20rem" }}
-            value={name ?? s.name}
-            maxLength={128}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <button type="submit" className="btn btn-primary btn-sm" disabled={name === null || name === s.name}>
-            Rename
-          </button>
-          <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
-            Delete service account
-          </button>
-        </form>
+        {canWrite && (
+          <form className="card-foot" onSubmit={(e) => void rename(e)}>
+            <input
+              className="input input-sm auto"
+              aria-label="Name"
+              style={{ maxWidth: "20rem" }}
+              value={name ?? s.name}
+              maxLength={128}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={name === null || name === s.name}>
+              Rename
+            </button>
+            <button type="button" className="btn btn-danger btn-sm end" onClick={() => void remove()}>
+              Delete service account
+            </button>
+          </form>
+        )}
       </div>
 
       <h2 className="section-title">Keys</h2>
-      <KeysTable base={base + "/keys"} />
+      <KeysTable base={base + "/keys"} canRevoke={canWrite} onPurged={node.reload} />
     </>
   )
 }
