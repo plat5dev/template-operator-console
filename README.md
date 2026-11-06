@@ -109,7 +109,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 - **Token**: kept in `sessionStorage`. It survives a reload, not a closed tab. No cookies, no refresh tokens. When it expires, or the gateway answers 401, sign in again.
 - **Sign out** drops the token. The IdP's own session is left alone.
 - **Paths**: console URLs mirror the gateway paths they call. `/nodes/{id}/bindings` here calls `GET /nodes/{id}/bindings` there.
-- **Acting as a member**: a node's children and an environment's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
+- **Acting as a member**: a node's children and a project's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
 - **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the operator log and in the service's log.
 - **Refusals with their own code** are branched on by code, never by status (Plat5 `docs/reference/errors.md`). A name edit answered `409` `NAME_OWNED_BY_IDP` (the deployment's `users.name.sync: each_sign_in`) loses Edit, Set and Clear, and the page says the name comes from the sign-in provider. A restore answered `409` `GRACE_EXPIRED` loses Restore. A create answered `409` `PARENT_DELETED` loses its form, which a deleted node never shows. A write answered `409` `NODE_PURGED` reloads the node, which then shows as purged and read-only.
 - **A purged node is read-only** (Plat5 `docs/concepts/lifecycle.md`). Its page, its tabs, its service accounts' pages and, on a purged root, its members' pages offer no write: no rename, create, binding, member, service account or key change, and no invite revoke. Deletes aren't offered either, since they'd change nothing. Release slug stays, on a purged root whose `slug` isn't `null`. One function decides it: `writable` in `src/api/identity.ts`.
@@ -124,7 +124,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | `/nodes/{id}` | `GET DELETE /nodes/{id}`, `PATCH /nodes/{id}` (rename; not on a purged node), `POST …/restore`, `POST …/release-slug` (a purged root whose `slug` isn't `null`), and its first tab |
 | `/nodes/{id}/children/{kind}` | `GET /nodes?parent_id=&kind=&status=`; `POST /nodes/{id}/children/{kind}` |
 | `/as/{member_id}/nodes/{id}/children/{kind}` | `GET POST /as/{member_id}/nodes/{id}/children/{kind}` |
-| `/environments/{id}/tasks`, `/as/{member_id}/environments/{id}/tasks` | The starter API's `GET /environments/{id}/tasks` |
+| `/projects/{id}/tasks`, `/as/{member_id}/projects/{id}/tasks` | The starter API's `GET /projects/{id}/tasks` |
 | `/nodes/{id}/bindings` | `GET POST /nodes/{id}/bindings`, `PATCH DELETE …/{binding_id}` |
 | `/nodes/{id}/members` | `GET POST /nodes/{root_id}/members` (a root) |
 | `/nodes/{root_id}/members/{member_id}` | `GET DELETE`, `GET /members/{member_id}/user`, `GET /nodes/{root_id}/memberships/{member_id}` |

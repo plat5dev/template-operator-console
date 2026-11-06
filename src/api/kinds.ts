@@ -4,7 +4,6 @@
 export const KINDS: Record<string, { parent: string | null; plural: string }> = {
   organization: { parent: null, plural: "Organizations" },
   project: { parent: "organization", plural: "Projects" },
-  environment: { parent: "project", plural: "Environments" },
 }
 
 /** The kinds with no parent: the roots of trees. */
