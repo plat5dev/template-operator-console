@@ -10,6 +10,12 @@ export function Id({ value }: { value: string | null | undefined }) {
   return <code className="select-all">{value}</code>
 }
 
+/** A node's slug, or a dash once it's freed (`null`). */
+export function Slug({ value }: { value: string | null }) {
+  if (value === null) return <span className="muted">—</span>
+  return <code>{value}</code>
+}
+
 /** State by shape: filled is active, hollow is paused, struck is over. */
 export function Status({ value }: { value: string }) {
   return <span className={`status status-${value}`}>{value}</span>

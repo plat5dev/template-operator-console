@@ -120,7 +120,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | Console path | Gateway calls |
 |--------------|---------------|
 | `/nodes?kind=organization` | `GET /nodes?kind=&status=`; `POST /roots/{kind}` |
-| `/nodes/{id}` | `GET PATCH DELETE /nodes/{id}`, `POST …/restore`, `POST …/release-slug` (a purged root), and its first tab |
+| `/nodes/{id}` | `GET PATCH DELETE /nodes/{id}`, `POST …/restore`, `POST …/release-slug` (a purged root whose `slug` isn't `null`), and its first tab |
 | `/nodes/{id}/children/{kind}` | `GET /nodes?parent_id=&kind=&status=`; `POST /nodes/{id}/children/{kind}` |
 | `/as/{member_id}/nodes/{id}/children/{kind}` | `GET POST /as/{member_id}/nodes/{id}/children/{kind}` |
 | `/environments/{id}/tasks`, `/as/{member_id}/environments/{id}/tasks` | The starter API's `GET /environments/{id}/tasks` |

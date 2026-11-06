@@ -10,7 +10,7 @@ import { ErrorAlert } from "../components/ErrorAlert"
 import { initials } from "../components/initials"
 import { NodeCrumbs } from "../components/NodeCrumbs"
 import { NodeTable } from "../components/NodeTable"
-import { Empty, Field, Fields, Id, LoadMore, Loading, PageHead, RoleSelect, Status, Tabs, When } from "../components/ui"
+import { Empty, Field, Fields, Id, LoadMore, Loading, PageHead, RoleSelect, Slug, Status, Tabs, When } from "../components/ui"
 
 export type NodeTab =
   | "children"
@@ -110,8 +110,9 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
   )
 }
 
-/** The node's fields, rename, and its lifecycle: delete, restore, and on a purged root,
- *  releasing its slug. A restore past the grace (409 `GRACE_EXPIRED`) loses its Restore
+/** The node's fields, rename, and its lifecycle: delete, restore, and on a purged root
+ *  whose slug isn't `null` yet, releasing it; the node it answers has `slug: null`, so
+ *  the button goes. A restore past the grace (409 `GRACE_EXPIRED`) loses its Restore
  *  button; one refused because the parent is deleted (409 `PARENT_DELETED`) keeps it, for
  *  once the parent is restored. */
 function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node) => void; reload: () => void }) {
@@ -141,7 +142,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
     const typed = window.prompt(
       `Delete ${node.display_name} and every node below it? It can be restored until it's purged.\n\nType its slug "${node.slug}" to confirm.`,
     )
-    if (typed !== node.slug) return
+    if (typed === null || typed !== node.slug) return
     void run(async () => {
       await api("DELETE", base)
       reload()
@@ -163,6 +164,10 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
     void run(async () => onChanged(await api<Node>("POST", base + "/release-slug")))
   }
 
+  const canRestore = node.status === "deleted" && !graceExpired
+  const canRelease = node.status === "purged" && node.parent_id === null && node.slug !== null
+  const canDelete = node.status === "active"
+
   return (
     <div className="card">
       <div className="card-body">
@@ -170,7 +175,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
         <Fields>
           <Field label="Kind">{node.kind}</Field>
           <Field label="Slug">
-            <code>{node.slug}</code>
+            <Slug value={node.slug} />
           </Field>
           <Field label="Display name">
             {name === null ? (
@@ -222,23 +227,25 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
           </Field>
         </Fields>
       </div>
-      <div className="card-foot">
-        {node.status === "deleted" && !graceExpired && (
-          <button type="button" className="btn btn-sm" onClick={restore}>
-            Restore
-          </button>
-        )}
-        {node.status === "purged" && node.parent_id === null && (
-          <button type="button" className="btn btn-sm" onClick={releaseSlug}>
-            Release slug
-          </button>
-        )}
-        {node.status === "active" && (
-          <button type="button" className="btn btn-danger btn-sm end" onClick={remove}>
-            Delete {node.kind}
-          </button>
-        )}
-      </div>
+      {(canRestore || canRelease || canDelete) && (
+        <div className="card-foot">
+          {canRestore && (
+            <button type="button" className="btn btn-sm" onClick={restore}>
+              Restore
+            </button>
+          )}
+          {canRelease && (
+            <button type="button" className="btn btn-sm" onClick={releaseSlug}>
+              Release slug
+            </button>
+          )}
+          {canDelete && (
+            <button type="button" className="btn btn-danger btn-sm end" onClick={remove}>
+              Delete {node.kind}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

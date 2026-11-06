@@ -8,7 +8,8 @@ export type NodeStatus = "active" | "deleted" | "purged"
 export type Ancestor = {
   id: string
   kind: string
-  slug: string
+  /** `null` once freed, as on the node. */
+  slug: string | null
   display_name: string
 }
 
@@ -18,7 +19,8 @@ export type Node = {
   kind: string
   parent_id: string | null
   root_id: string
-  slug: string
+  /** `null` once freed: on a purged node below a root, and on a root whose slug was released. */
+  slug: string | null
   display_name: string
   status: NodeStatus
   deleted_at: string | null

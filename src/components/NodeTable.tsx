@@ -3,7 +3,7 @@ import { path } from "../api/client"
 import type { usePaged } from "../api/hooks"
 import type { Node } from "../api/identity"
 import { initials } from "./initials"
-import { Empty, Id, LoadMore, Loading, Status, When } from "./ui"
+import { Empty, Id, LoadMore, Loading, Slug, Status, When } from "./ui"
 
 /** A list of nodes, each a link to its page. */
 export function NodeTable({
@@ -40,7 +40,7 @@ export function NodeTable({
                   </span>
                 </td>
                 <td className="small">
-                  <code>{c.slug}</code>
+                  <Slug value={c.slug} />
                 </td>
                 <td>
                   <Status value={c.status} />
