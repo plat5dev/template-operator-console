@@ -110,7 +110,7 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
   )
 }
 
-/** The node's fields, rename, and its lifecycle: delete, restore, and on a purged root
+/** The node's fields, rename (not on a purged node), and its lifecycle: delete, restore, and on a purged root
  *  whose slug isn't `null` yet, releasing it; the node it answers has `slug: null`, so
  *  the button goes. A restore past the grace (409 `GRACE_EXPIRED`) loses its Restore
  *  button; one refused because the parent is deleted (409 `PARENT_DELETED`) keeps it, for
@@ -167,6 +167,7 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
   const canRestore = node.status === "deleted" && !graceExpired
   const canRelease = node.status === "purged" && node.parent_id === null && node.slug !== null
   const canDelete = node.status === "active"
+  const canRename = node.status !== "purged"
 
   return (
     <div className="card">
@@ -180,10 +181,15 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
           <Field label="Display name">
             {name === null ? (
               <>
-                {node.display_name}{" "}
-                <button type="button" className="btn-link small" onClick={() => setName(node.display_name)}>
-                  Rename
-                </button>
+                {node.display_name}
+                {canRename && (
+                  <>
+                    {" "}
+                    <button type="button" className="btn-link small" onClick={() => setName(node.display_name)}>
+                      Rename
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               <form className="cluster" style={{ maxWidth: "28rem" }} onSubmit={rename}>
