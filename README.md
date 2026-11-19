@@ -42,7 +42,7 @@ bun run build
 | A gateway | `VITE_GATEWAY_URL`. The gateway's `ALLOWED_ORIGINS` includes this console's origin |
 | An operator IdP | `VITE_AUTH_ISSUER`. Equal to the gateway's `AUTH_ISSUER`, character for character |
 | A public client at that IdP | `VITE_AUTH_CLIENT_ID`. No secret, PKCE, redirect URI `<console origin>/callback` |
-| An audience the gateway accepts | The access token's `aud` is in the gateway's `AUTH_AUDIENCES` |
+| An audience the gateway accepts | The access token's `aud` is in the gateway's `AUTH_ALLOWED_AUDIENCES` |
 
 `plat5 start`'s operator module sets all four up for the console it runs.
 
@@ -97,9 +97,9 @@ Pages serves `index.html` for unknown paths, so deep links work. `public/_header
 
 | IdP | |
 |-----|--|
-| Okta | SPA app integration, PKCE. Use a custom authorization server so access tokens are JWTs; its audience (e.g. `api://operator`) goes in `AUTH_AUDIENCES`. Issuer is the authorization server's, e.g. `https://example.okta.com/oauth2/default` |
+| Okta | SPA app integration, PKCE. Use a custom authorization server so access tokens are JWTs; its audience (e.g. `api://operator`) goes in `AUTH_ALLOWED_AUDIENCES`. Issuer is the authorization server's, e.g. `https://example.okta.com/oauth2/default` |
 | Dex | Static client with `public: true` and the redirect URI. Add the console origin to `web.allowedOrigins` so the browser can call `/token`. Access token `aud` is the client id |
-| Auth0 | SPA application. Set `VITE_AUTH_AUDIENCE` to the API identifier; the same value goes in `AUTH_AUDIENCES` |
+| Auth0 | SPA application. Set `VITE_AUTH_AUDIENCE` to the API identifier; the same value goes in `AUTH_ALLOWED_AUDIENCES` |
 | Plat5 Auth | Publishes OAuth 2.0 metadata, not OIDC, and returns no ID token: the console falls back to both, and shows the email from the access token (`properties.email`, with `AUTH_TOKEN_EMAIL=true` on the issuer). Add the client id to `AUTH_ALLOWED_CLIENTS`, `<origin>/callback` to `AUTH_ALLOWED_REDIRECT_URIS`, and the origin to `AUTH_ALLOWED_ORIGINS`. Access token `aud` is the client id |
 
 Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
@@ -111,7 +111,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 - **Paths**: console URLs mirror the gateway paths they call. `/nodes/{id}/bindings` here calls `GET /nodes/{id}/bindings` there.
 - **Acting as a member**: a node's children and a project's tasks can be listed acting as a member of the tree, picked on the tab. The console path becomes `/as/{member_id}/…`, the gateway path it calls; a child created there gives that member the creator role. Leaving the tab stops it. Access is still the operator's.
 - **Errors** show the Plat5 envelope and the `X-Request-ID`. That id finds the request in the operator log and in the service's log.
-- **Refusals with their own code** are branched on by code, never by status (Plat5 `docs/reference/errors.md`). A name edit answered `409` `NAME_OWNED_BY_IDP` (the deployment's `users.name.sync: each_sign_in`) loses Edit, Set and Clear, and the page says the name comes from the sign-in provider. A restore answered `409` `GRACE_EXPIRED` loses Restore. A create answered `409` `PARENT_DELETED` loses its form, which a deleted node never shows. A write answered `409` `NODE_PURGED` reloads the node, which then shows as purged and read-only.
+- **Refusals with their own code** are branched on by code, never by status (Plat5 `docs/reference/errors.md`). A restore answered `409` `GRACE_EXPIRED` loses Restore. A create answered `409` `PARENT_DELETED` loses its form, which a deleted node never shows. A write answered `409` `NODE_PURGED` reloads the node, which then shows as purged and read-only.
 - **A purged node is read-only** (Plat5 `docs/concepts/lifecycle.md`). Its page, its tabs, its service accounts' pages and, on a purged root, its members' pages offer no write: no rename, create, binding, member, service account or key change, and no invite revoke. Deletes aren't offered either, since they'd change nothing. Release slug stays, on a purged root whose `slug` isn't `null`. One function decides it: `writable` in `src/api/identity.ts`.
 - **Request** page: any method and path through the gateway, with the raw response. For routes without a page. `?method=&path=` prefills it.
 - **Keys** are listed and revoked, never created. The gateway doesn't route key creation, so operators never hold a customer secret. Invites are listed and revoked too, never created: their tokens are secrets as well. Their uses show `∞` where `max_uses` is `null`, unlimited.
@@ -133,7 +133,7 @@ Plain `http` issuers are refused except on `localhost` and `127.0.0.1`.
 | `/nodes/{id}/roles` | `GET /nodes/{id}/roles` |
 | `/nodes/{id}/audit-events` | Plat5 audit's `GET /nodes/{id}/audit-events` |
 | `/users?issuer=&subject=` | `GET /users?issuer=&subject=` |
-| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET PATCH DELETE /users/{id}` (`PATCH { name }` sets the person's name, `{ "name": null }` clears it; `409` `NAME_OWNED_BY_IDP` under `each_sign_in`), `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
+| `/users/{id}`, `…/nodes`, `…/keys`, `…/audit-events` | `GET PATCH DELETE /users/{id}` (`PATCH { name }` sets the person's name, `{ "name": null }` clears it), `PATCH …/status`, `GET …/nodes`, `GET DELETE …/keys`, audit's `GET …/audit-events` |
 | `/operator-audit-events` | `GET /operator-audit-events`, its filters as the query (`?node_id=`) |
 | `/request` | anything |
 
