@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bunx tsc --noEmit -p tsconfig.app.json
+      - run: bunx tsc --noEmit -p tsconfig.node.json
+      - run: bun run build
+        env:
+          VITE_GATEWAY_URL: http://localhost:5410
+          VITE_AUTH_ISSUER: http://localhost:5411
+          VITE_AUTH_CLIENT_ID: operator-console
+      - run: bun run build:runtime

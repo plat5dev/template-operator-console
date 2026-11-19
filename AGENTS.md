@@ -10,7 +10,7 @@ An example client of the operator gateway. A static SPA for Cloudflare Pages. Th
 | Login is authorization code + PKCE with a public client | `src/auth/oidc.ts` |
 | The access token goes to the gateway and nowhere else | `src/api/client.ts` |
 | Token in `sessionStorage`. No cookies, no refresh tokens | `src/auth/session.ts` |
-| Settings are build-time `VITE_*`. Required ones fail the build | `vite.config.ts` |
+| Settings are build-time `VITE_*` (required ones fail the build) or runtime `/config.js` via `build:runtime` and `docker/config.sh` | `src/config.ts`, `vite.config.ts`, `docker/config.sh` |
 | Console paths mirror the gateway paths they call | `src/App.tsx` |
 | Errors show the envelope and `X-Request-ID` | `src/components/ErrorAlert.tsx` |
 

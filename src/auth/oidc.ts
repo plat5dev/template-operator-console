@@ -3,13 +3,23 @@ import * as oauth from "oauth4webapi"
 import { config } from "../config"
 import { writeSession, type Session } from "./session"
 
-const issuer = new URL(config.issuer)
 const client: oauth.Client = { client_id: config.clientId }
 const clientAuth = oauth.None()
 
-// oauth4webapi refuses plain http. Allow it for an IdP on this machine only.
-const local = issuer.protocol === "http:" && ["localhost", "127.0.0.1"].includes(issuer.hostname)
-const httpOptions = local ? { [oauth.allowInsecureRequests]: true } : {}
+function buildIssuerConfig() {
+  const issuer = new URL(config.issuer)
+  // oauth4webapi refuses plain http. Allow it for an IdP on this machine only.
+  const local = issuer.protocol === "http:" && ["localhost", "127.0.0.1"].includes(issuer.hostname)
+  const httpOptions = local ? { [oauth.allowInsecureRequests]: true } : {}
+  return { issuer, httpOptions }
+}
+
+type IssuerConfig = ReturnType<typeof buildIssuerConfig>
+let cachedIssuer: IssuerConfig | undefined
+
+function issuerConfig(): IssuerConfig {
+  return (cachedIssuer ??= buildIssuerConfig())
+}
 
 // oidc: the IdP published OIDC discovery, so the token response carries an ID token
 // and the nonce is checked.
@@ -18,6 +28,7 @@ type Discovered = { as: oauth.AuthorizationServer; oidc: boolean }
 let server: Promise<Discovered> | undefined
 
 async function discoverAs(algorithm: "oidc" | "oauth2"): Promise<Discovered> {
+  const { issuer, httpOptions } = issuerConfig()
   const res = await oauth.discoveryRequest(issuer, { ...httpOptions, algorithm })
   return { as: await oauth.processDiscoveryResponse(issuer, res), oidc: algorithm === "oidc" }
 }
@@ -43,10 +54,6 @@ function authorizationServer(): Promise<Discovered> {
   })
   return server
 }
-
-// Discovery is fetched when the app loads, so sign-in doesn't wait for it. A failure
-// is fetched again, and shown, when sign-in needs it.
-authorizationServer().catch(() => {})
 
 type PendingLogin = { state: string; nonce: string; verifier: string; returnTo: string }
 
@@ -94,6 +101,7 @@ async function exchange(callbackUrl: URL): Promise<string> {
   if (!raw) throw new Error("No sign-in in progress in this tab. Start again.")
   const pending = JSON.parse(raw) as PendingLogin
 
+  const { httpOptions } = issuerConfig()
   const { as, oidc } = await authorizationServer()
   const params = oauth.validateAuthResponse(as, client, callbackUrl, pending.state)
   const res = await oauth.authorizationCodeGrantRequest(
