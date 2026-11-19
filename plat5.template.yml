@@ -6,7 +6,7 @@ kind: operator-console
 description: Vite + React console for your operators, on the operator gateway (the tree, people, tasks, audit)
 
 # plat5 start runs it from this compose file, on :5412, with the operator module. Its
-# origin, operator.console.web in plat5.dev.yml, may sign in with the operator IdP and
+# origin, operator.console.web in plat5.local.yml, may sign in with the operator IdP and
 # call the operator gateway.
 app:
   compose: docker-compose.yml
