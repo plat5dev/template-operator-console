@@ -6,7 +6,7 @@ It is a static SPA. It signs operators in with OIDC (authorization code + PKCE),
 
 `plat5 init` copies it into a project's `operator-console/` folder, beside the API starter, as the CLI's [starters](https://github.com/plat5dev/cli#starters) section says; `--no-operator-console` leaves it out. It is a starting point the project owns: change anything.
 
-The deployment's kinds are declared in `src/api/kinds.ts`, as its `plat5.yml` declares them: each kind's parent, and what its nodes are called. A node's page has a tab for each kind of child. A project's Tasks tab calls the starter API, not Plat5: `GET /projects/{project_id}/tasks`, which every `template-*-api` starter serves and routes for operators, read-only, in its `routes.operator.yml`. Without that route the tab says so; with a starter of your own, change `src/api/tasks.ts` and the tab to its shapes.
+The deployment's kinds are declared in `src/api/kinds.ts`, as its `plat5.yml` declares them: each kind's parent, and what its nodes are called. A node's page has a tab for each kind of child, plus any API tabs registered in `src/appTabs.tsx`. The starter registers a project's Tasks tab (`src/pages/TasksTab.tsx`, calling `GET /projects/{project_id}/tasks`); to remove or replace Tasks with your own API's tabs, edit `APP_NODE_TABS` in `src/appTabs.tsx` and delete `src/api/tasks.ts` and `src/pages/TasksTab.tsx`.
 
 To add a page: a file in `src/pages/`, a route in `src/App.tsx`, a link in `src/components/Layout.tsx`. Read with `useResource` / `usePaged` (`src/api/hooks.ts`), write with `api()` (`src/api/client.ts`). The path must be in the operator gateway's routes: the project's `operator.routes.yml`.
 

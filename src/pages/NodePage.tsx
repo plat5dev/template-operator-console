@@ -1,10 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ApiError, api, asMember, hasCode, path } from "../api/client"
-import { useMemberNames, usePaged, useResource } from "../api/hooks"
+import { api, asMember, hasCode, path } from "../api/client"
+import { usePaged, useResource } from "../api/hooks"
 import { writable, type Binding, type Invite, type Member, type Node, type NodeStatus, type RolesList, type ServiceAccount } from "../api/identity"
 import { childKinds, plural } from "../api/kinds"
-import { tasksKind, type Task, type TaskStatus } from "../api/tasks"
+import { APP_NODE_TABS } from "../appTabs"
+import { ActAs } from "../components/ActAs"
 import { AuditLog } from "../components/AuditLog"
 import { ErrorAlert } from "../components/ErrorAlert"
 import { initials } from "../components/initials"
@@ -12,9 +13,8 @@ import { NodeCrumbs } from "../components/NodeCrumbs"
 import { NodeTable } from "../components/NodeTable"
 import { Empty, Field, Fields, Id, LoadMore, Loading, PageHead, RoleSelect, Slug, Status, Tabs, When } from "../components/ui"
 
-export type NodeTab =
+export type BuiltinNodeTab =
   | "children"
-  | "tasks"
   | "bindings"
   | "members"
   | "service-accounts"
@@ -22,27 +22,31 @@ export type NodeTab =
   | "roles"
   | "audit-events"
 
+export type NodeTab = BuiltinNodeTab | (string & {})
+
 /** Each tab's console path, which is the gateway path it lists. */
 function tabPath(node: Node, tab: NodeTab, kind?: string): string {
   if (tab === "children") return path`/nodes/${node.id}/children/${kind ?? ""}`
-  if (tab === "tasks") return path`/projects/${node.id}/tasks`
+  const appTab = APP_NODE_TABS.find((t) => t.key === tab && t.kind === node.kind)
+  if (appTab) return appTab.nodePath(node)
   return path`/nodes/${node.id}/` + tab
 }
 
-/** The tab `/nodes/{id}` opens on: its first kind of children, else its tasks, else its bindings. */
+/** The tab `/nodes/{id}` opens on: its first kind of children, else its first API tab, else its bindings. */
 function defaultTab(node: Node): { tab: NodeTab; kind?: string } {
   const kinds = childKinds(node.kind)
   if (kinds.length > 0) return { tab: "children", kind: kinds[0] }
-  if (node.kind === tasksKind) return { tab: "tasks" }
+  const appTab = APP_NODE_TABS.find((t) => t.kind === node.kind)
+  if (appTab) return { tab: appTab.key }
   return { tab: "bindings" }
 }
 
 /** A node of any kind, by id: its fields and lifecycle actions, then its children,
- *  tasks, bindings, members (on a root), service accounts, invites, roles and audit log
- *  as tabs. Children and tasks can be listed acting as a member: `/as/{member_id}`. */
+ *  API tabs (src/appTabs.tsx), bindings, members (on a root), service accounts, invites,
+ *  roles and audit log as tabs. */
 export function NodePage({ tab: routed }: { tab?: NodeTab }) {
-  const { nodeId, projectId, kind: routedKind, memberId } = useParams()
-  const id = nodeId ?? projectId ?? ""
+  const { nodeId, kind: routedKind, memberId } = useParams()
+  const id = nodeId ?? ""
   const navigate = useNavigate()
   const base = path`/nodes/${id}`
   const node = useResource<Node>(base)
@@ -54,10 +58,12 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
   const tab = routed ?? fallback.tab
   const kind = routedKind ?? fallback.kind
   const root = n.parent_id === null
+  const appTabs = APP_NODE_TABS.filter((t) => t.kind === n.kind)
+  const activeAppTab = appTabs.find((t) => t.key === tab)
 
   const tabs: [string, string][] = [
     ...childKinds(n.kind).map((k): [string, string] => [`children/${k}`, plural(k)]),
-    ...(n.kind === tasksKind ? [["tasks", "Tasks"] as [string, string]] : []),
+    ...appTabs.map((t): [string, string] => [t.key, t.label]),
     ["bindings", "Bindings"],
     ...(root ? [["members", "Members"] as [string, string]] : []),
     ["service-accounts", "Service accounts"],
@@ -92,7 +98,7 @@ export function NodePage({ tab: routed }: { tab?: NodeTab }) {
         {tab === "children" && kind && (
           <Children key={`${n.id}/${kind}`} node={n} kind={kind} memberId={memberId} onPurged={node.reload} />
         )}
-        {tab === "tasks" && <Tasks node={n} memberId={memberId} />}
+        {activeAppTab && activeAppTab.render({ node: n, memberId })}
         {tab === "bindings" && <Bindings node={n} onPurged={node.reload} />}
         {tab === "members" && <Members node={n} onPurged={node.reload} />}
         {tab === "service-accounts" && <ServiceAccounts node={n} />}
@@ -260,54 +266,6 @@ function NodeCard({ node, onChanged, reload }: { node: Node; onChanged: (n: Node
   )
 }
 
-/** Acting as a member, for the routes that allow it: the member is in the URL
- *  (`/as/{member_id}/…`), so leaving the tab or the page stops it. */
-function ActAs({ node, memberId, at }: { node: Node; memberId?: string; at: string }) {
-  const navigate = useNavigate()
-  const members = useResource<{ members: Member[] }>(path`/nodes/${node.root_id}/members` + "?limit=100")
-  const names = useMemberNames(memberId ? [{ rootId: node.root_id, memberId }] : [])
-
-  if (memberId) {
-    const name = names.get(memberId)?.name
-    return (
-      <div className="alert alert-warn">
-        <div>
-          Acting as{" "}
-          <Link to={path`/nodes/${node.root_id}/members/${memberId}`}>{name ?? <code>{memberId}</code>}</Link>: these
-          requests go to <code>/as/{memberId}</code>, and the service is told that member. Access is still yours.{" "}
-          <button type="button" className="btn-link" onClick={() => navigate(at)}>
-            Stop
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="form-row">
-      <div className="field">
-        <label className="small" htmlFor="act_as">
-          Act as a member
-        </label>
-        <select
-          id="act_as"
-          className="select select-sm"
-          value=""
-          onChange={(e) => e.target.value && navigate(asMember(e.target.value, at))}
-        >
-          <option value="">Nobody</option>
-          {(members.data?.members ?? []).map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name ?? m.id}
-              {m.principal === "service_account" ? " (service account)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  )
-}
-
 const childStatuses: [NodeStatus, string][] = [
   ["active", "Live"],
   ["deleted", "Deleted"],
@@ -414,69 +372,6 @@ function Children({
           </div>
         </form>
       )}
-    </>
-  )
-}
-
-const taskStatusLabel: Record<TaskStatus, string> = { todo: "To do", in_progress: "In progress", done: "Done" }
-
-/** The project's tasks, from the starter API. A 404 is the operator gateway with no
- *  route for them: the deployment hasn't routed the API's paths. */
-function Tasks({ node, memberId }: { node: Node; memberId?: string }) {
-  const at = path`/projects/${node.id}/tasks`
-  const list = usePaged<Task>(asMember(memberId, at), "tasks")
-  const names = useMemberNames(list.items.map((t) => ({ rootId: node.root_id, memberId: t.created_by })))
-
-  return (
-    <>
-      <ActAs node={node} memberId={memberId} at={at} />
-      {list.error instanceof ApiError && list.error.status === 404 ? (
-        <Empty>
-          The operator gateway has no route for <code>{at}</code>. Add the API's <code>routes.operator.yml</code> to
-          the project's <code>operator.routes.yml</code>.
-        </Empty>
-      ) : (
-        <ErrorAlert error={list.error} />
-      )}
-      {list.loading && list.items.length === 0 ? (
-        <Loading />
-      ) : list.items.length === 0 ? (
-        !list.error && <Empty>No tasks.</Empty>
-      ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Created by</th>
-                <th>Id</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.items.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.title}</td>
-                  <td className="small">{taskStatusLabel[t.status]}</td>
-                  <td className="small">
-                    <Link to={path`/nodes/${node.root_id}/members/${t.created_by}`}>
-                      {names.get(t.created_by)?.name ?? <code>{t.created_by}</code>}
-                    </Link>
-                  </td>
-                  <td className="small">
-                    <Id value={t.id} />
-                  </td>
-                  <td className="small">
-                    <When at={t.updated_at} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <LoadMore show={list.hasMore} loading={list.loading} onClick={() => void list.loadMore()} />
     </>
   )
 }

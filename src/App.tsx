@@ -1,5 +1,6 @@
-import type { ReactNode } from "react"
+import { Fragment, type ReactNode } from "react"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
+import { APP_NODE_TABS } from "./appTabs"
 import { AuthProvider } from "./auth/AuthContext"
 import { Layout } from "./components/Layout"
 import { RequireAuth } from "./components/RequireAuth"
@@ -33,8 +34,12 @@ export default function App() {
             <Route path="nodes/:nodeId" element={signedIn(<NodePage />)} />
             <Route path="nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
             <Route path="as/:memberId/nodes/:nodeId/children/:kind" element={signedIn(<NodePage tab="children" />)} />
-            <Route path="projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
-            <Route path="as/:memberId/projects/:projectId/tasks" element={signedIn(<NodePage tab="tasks" />)} />
+            {APP_NODE_TABS.map((t) => (
+              <Fragment key={t.key}>
+                <Route path={t.routePath} element={signedIn(<NodePage tab={t.key} />)} />
+                {t.asMember && <Route path={`as/:memberId/${t.routePath}`} element={signedIn(<NodePage tab={t.key} />)} />}
+              </Fragment>
+            ))}
             {nodeTabs.map((tab) => (
               <Route key={tab} path={`nodes/:nodeId/${tab}`} element={signedIn(<NodePage tab={tab} />)} />
             ))}
